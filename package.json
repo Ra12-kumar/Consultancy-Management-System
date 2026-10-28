@@ -1,0 +1,43 @@
+{
+  "name": "education-consultancy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Education Consultancy Management System (Next.js frontend + Express/TypeScript backend + MongoDB).",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm --workspace backend run dev",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "start:backend": "npm --workspace backend run start",
+    "start:frontend": "npm --workspace frontend run start",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "npm --workspace backend run build",
+    "build:frontend": "npm --workspace frontend run build",
+    "lint": "npm --workspace backend run lint && npm --workspace frontend run lint",
+    "typecheck": "npm --workspace backend run typecheck && npm --workspace frontend run typecheck",
+    "test": "npm --workspace backend run test && npm --workspace education-consultancy-frontend run test",
+    "seed": "npm --workspace backend run seed",
+    "seed:catalog": "npm --workspace backend run seed:catalog",
+    "seed:remove-samples": "npm --workspace backend run seed:remove-samples",
+    "catalog:rebuild": "npm --workspace backend run catalog:rebuild",
+    "migrate:stage2": "npm --workspace backend run migrate:stage2",
+    "migrate:stage3": "npm --workspace backend run migrate:stage3",
+    "migrate:stage5": "npm --workspace backend run migrate:stage5",
+    "migrate:stage7": "npm --workspace backend run migrate:stage7",
+    "db:check": "npm --workspace backend run db:check",
+    "admin:bootstrap": "npm --workspace backend run admin:bootstrap --",
+    "test:backend": "npm --workspace backend run test",
+    "test:frontend": "npm --workspace education-consultancy-frontend run test",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "concurrently": "^9.2.5"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

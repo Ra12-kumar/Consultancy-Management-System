@@ -1,0 +1,6 @@
+# Keep LF line endings in the repository (matches CI on Linux and the Docker images).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.webp binary

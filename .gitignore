@@ -1,0 +1,33 @@
+# Dependencies and builds
+node_modules/
+.next/
+.next-e2e/
+test-results/
+playwright-report/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment files: never commit real settings (examples are fine)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Uploaded files (private student data)
+storage/
+
+# Local config with real values
+config/project-config.json
+
+# Logs and OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

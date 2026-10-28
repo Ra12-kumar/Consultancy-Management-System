@@ -1,0 +1,52 @@
+# Education Consultancy – production-style stack. Its own project name, network and volumes: it shares nothing
+# with any other application on this machine (including the Gym application's Docker resources).
+# Settings come from .env.production (copy .env.example; never commit it). Nothing here drops or resets data.
+name: education-consultancy
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - ec_mongo_data:/data/db
+    # Not published to the host: only the API can reach it.
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      BACKEND_PORT: "5100"
+      MONGODB_URI: mongodb://mongo:27017/education_consultancy
+      UPLOAD_DIR: /data/uploads
+      TRUST_PROXY: "1"
+    volumes:
+      - ec_uploads:/data/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:5100
+    ports:
+      # Put an HTTPS reverse proxy (nginx, Caddy, a cloud load balancer) in front of this port.
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  ec_mongo_data:
+  ec_uploads:

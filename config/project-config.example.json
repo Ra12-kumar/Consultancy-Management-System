@@ -1,0 +1,19 @@
+{
+  "consultancy": {
+    "name": "EduPath Consultancy",
+    "supportEmail": "support@example.com",
+    "supportPhone": "+91 00000 00000",
+    "timezone": "Asia/Kolkata",
+    "currency": "INR"
+  },
+  "features": {
+    "studentRegistration": true,
+    "scholarshipEligibilityCheck": true,
+    "counsellingAppointments": true,
+    "feedback": true
+  },
+  "limits": {
+    "maxEnquiriesPerStudentPerDay": 5,
+    "maxAppointmentsPerStudentPerWeek": 2
+  }
+}
