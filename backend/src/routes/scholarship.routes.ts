@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { authenticate, requirePermission, requireRole, requireVerifiedEmail } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import * as s from '../services/scholarship.service.js';
+import { publicCache } from '../services/cache.service.js';
 import { sendSuccess } from '../utils/response.js';
 import { idParams } from '../validators/catalog.validators.js';
 import * as v from '../validators/scholarship.validators.js';
@@ -18,13 +19,13 @@ const paged = (fn: (query: any) => Promise<{ items: unknown; meta: Record<string
 // ---- Public (published only) and the signed-in student's own data: /api/scholarships ----
 export const scholarshipRouter = Router();
 const student = [authenticate, requireRole('student')];
-scholarshipRouter.get('/', validate({ query: v.publicScholarshipsQuery }), paged(s.listScholarships));
+scholarshipRouter.get('/', publicCache('scholarships'), validate({ query: v.publicScholarshipsQuery }), paged(s.listScholarships));
 // Preliminary eligibility for the signed-in student across all published scholarships (or one).
 scholarshipRouter.get('/eligibility', ...student, validate({ query: v.eligibilityQuery }), async (req, res) => sendSuccess(res, await s.checkMyEligibility(req, q(req))));
 scholarshipRouter.get('/:slug/eligibility', ...student, validate({ params: v.scholarshipSlugParams, query: v.eligibilityQuery }), async (req, res) =>
   sendSuccess(res, await s.checkMyEligibility(req, q(req), (req.valid.params as { slug: string }).slug)),
 );
-scholarshipRouter.get('/:slug', validate({ params: v.scholarshipSlugParams }), async (req, res) => sendSuccess(res, await s.scholarshipDetail((req.valid.params as { slug: string }).slug)));
+scholarshipRouter.get('/:slug', publicCache('scholarships'), validate({ params: v.scholarshipSlugParams }), async (req, res) => sendSuccess(res, await s.scholarshipDetail((req.valid.params as { slug: string }).slug)));
 
 // ---- Student applications: /api/scholarship-applications ----
 export const scholarshipApplicationRouter = Router();

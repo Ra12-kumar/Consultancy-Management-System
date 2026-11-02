@@ -4,7 +4,7 @@ import { CollegeFeeModel } from '../src/models/CollegeFee.js';
 import { CourseModel } from '../src/models/Course.js';
 import { LocationModel } from '../src/models/Location.js';
 import { refreshCollegeSummary } from '../src/services/catalog.service.js';
-import { calculateFee, type FeeComponent } from '../src/services/feeCalculator.js';
+import { calculateFee, storedTotals, type FeeComponent } from '../src/services/feeCalculator.js';
 
 export const rupees = (r: number) => r * 100;
 
@@ -32,16 +32,18 @@ export async function makeCollege(o: {
   months?: number;
   minPercentage?: number | null;
   tuitionPerYear?: number | null;
+  // Explicit fee components (instead of tuitionPerYear).
+  components?: FeeComponent[];
   type?: string;
   featured?: boolean;
   isSample?: boolean;
 }) {
   const college = await CollegeModel.create({ name: o.name ?? o.slug, slug: o.slug, type: o.type ?? 'private', status: o.status ?? 'published', location: o.location, featured: o.featured ?? false, isSample: o.isSample ?? false, lastVerifiedAt: new Date() });
   const offering = await CollegeCourseModel.create({ college: college._id, course: o.course, durationMonths: o.months ?? 48, minPercentage: o.minPercentage ?? null });
-  if (o.tuitionPerYear != null) {
-    const components: FeeComponent[] = [{ key: 'tuition', amountMinor: rupees(o.tuitionPerYear), frequency: 'per_year' }];
+  if (o.tuitionPerYear != null || o.components) {
+    const components: FeeComponent[] = o.components ?? [{ key: 'tuition', amountMinor: rupees(o.tuitionPerYear!), frequency: 'per_year' }];
     const b = calculateFee({ components, durationMonths: offering.durationMonths });
-    await CollegeFeeModel.create({ collegeCourse: offering._id, college: college._id, course: o.course, academicYear: '2026-27', components, status: 'published', version: 1, durationMonths: offering.durationMonths, officialTotalMinor: b.officialTotalMinor, sourceRef: 'https://example.edu/fees.pdf', lastVerifiedAt: new Date() });
+    await CollegeFeeModel.create({ collegeCourse: offering._id, college: college._id, course: o.course, academicYear: '2026-27', components, status: 'published', version: 1, durationMonths: offering.durationMonths, ...storedTotals(b), sourceRef: 'https://example.edu/fees.pdf', lastVerifiedAt: new Date() });
   }
   await refreshCollegeSummary(college._id);
   return { college, offering };

@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
-import { rateLimit } from 'express-rate-limit';
 import { createRequire } from 'node:module';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { apiLimiter } from './middleware/rateLimits.js';
 import { apiRouter, openApiDocument } from './routes/index.js';
 import { logger } from './utils/logger.js';
 
@@ -33,7 +33,8 @@ export function createApp() {
   app.use(express.urlencoded({ extended: false, limit: '100kb' }));
   app.use(cookieParser());
 
-  app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: env.API_RATE_LIMIT, standardHeaders: 'draft-8', legacyHeaders: false, handler: (_req, res) => res.status(429).json({ success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later' } }) }));
+  // Overall per-IP limit (shared by every API instance through Redis when REDIS_URL is set).
+  app.use('/api', apiLimiter);
   app.use('/api', apiRouter);
 
   // API documentation generated from the route table (on outside production unless API_DOCS=false).

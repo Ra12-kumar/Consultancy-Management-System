@@ -1,0 +1,35 @@
+# Staging: one pod each, its own namespace and host. Build and push the images first (docs/KUBERNETES.md).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: education-consultancy-staging
+resources:
+  - ../../base
+images:
+  - name: education-consultancy-api
+    newName: registry.example.com/udaan/api
+    newTag: staging
+  - name: education-consultancy-web
+    newName: registry.example.com/udaan/web
+    newTag: staging
+patches:
+  - target: { kind: Namespace, name: education-consultancy }
+    patch: |
+      - { op: replace, path: /metadata/name, value: education-consultancy-staging }
+  - target: { kind: ConfigMap, name: api-config }
+    patch: |
+      - { op: replace, path: /data/FRONTEND_URL, value: https://staging.udaan.example.com }
+      - { op: replace, path: /data/CORS_ORIGINS, value: https://staging.udaan.example.com }
+      - { op: replace, path: /data/REDIS_PREFIX, value: consultancy-staging }
+  - target: { kind: Ingress, name: education-consultancy }
+    patch: |
+      - { op: replace, path: /spec/rules/0/host, value: staging.udaan.example.com }
+  - target: { kind: HorizontalPodAutoscaler }
+    patch: |
+      - { op: replace, path: /spec/minReplicas, value: 1 }
+      - { op: replace, path: /spec/maxReplicas, value: 2 }
+  - target: { kind: Deployment, name: "(api|web)" }
+    patch: |
+      - { op: replace, path: /spec/replicas, value: 1 }
+  - target: { kind: PodDisruptionBudget }
+    patch: |
+      - { op: replace, path: /spec/minAvailable, value: 0 }

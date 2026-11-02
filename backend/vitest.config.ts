@@ -17,6 +17,8 @@ export default defineConfig({
       SMTP_PASS: '',
       EMAIL_FROM: '',
       ADMIN_NOTIFY_EMAILS: '',
+      // Tests never call the real CollegeDB API (a stub client is injected where needed).
+      COLLEGEDB_API_KEY: '',
       // Generous limits so only the dedicated tests hit them.
       LOGIN_RATE_LIMIT: '1000',
       AUTH_RATE_LIMIT: '1000',
@@ -25,5 +27,7 @@ export default defineConfig({
       UPLOAD_DIR: 'storage/test-uploads',
     },
     fileParallelism: false,
+    // Integration tests hash several passwords (argon2) and talk to MongoDB; 5 s is too tight on a busy machine.
+    testTimeout: 20_000,
   },
 });

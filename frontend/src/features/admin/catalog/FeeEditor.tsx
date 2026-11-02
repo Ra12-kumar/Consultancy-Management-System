@@ -179,7 +179,7 @@ function DraftForm({ offering, fee, onSaved, onCancel }: { offering: AdminOfferi
         </div>
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField label="EduPath service charge (₹, separate from college fees)" inputMode="decimal" value={form.consultancy} onChange={(e) => set({ consultancy: e.target.value })} error={errors.consultancy} />
+        <TextField label="Udaan service charge (₹, separate from college fees)" inputMode="decimal" value={form.consultancy} onChange={(e) => set({ consultancy: e.target.value })} error={errors.consultancy} />
         <SelectField label="Discount on tuition" value={form.discountType} onChange={(e) => set({ discountType: e.target.value as Form["discountType"] })}>
           <option value="">No discount</option>
           <option value="percent">Percentage of tuition</option>

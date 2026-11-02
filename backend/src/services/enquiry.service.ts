@@ -78,13 +78,16 @@ export async function createEnquiry(req: Request, input: CreateEnquiryInput) {
   if (open) throw new ApiError(409, 'DUPLICATE_ENQUIRY', `You already have an open enquiry for this course (${open.reference}). Add details to it instead.`, [{ field: 'reference', message: open.reference }]);
 
   const [user, profile] = await Promise.all([UserModel.findById(req.user!.id).lean(), StudentProfileModel.findOne({ user: req.user!.id }).lean()]);
-  const { idempotencyKey, ...preferences } = input;
+  const { idempotencyKey, source, campaign, callbackTime, ...preferences } = input;
   let created;
   try {
     created = await EnquiryModel.create({
       reference: await nextReference('ENQ'),
       student: me(req),
       idempotencyKey,
+      source,
+      campaign,
+      callbackTime,
       studentSnapshot: {
         name: user!.name,
         email: user!.email,
@@ -95,6 +98,7 @@ export async function createEnquiry(req: Request, input: CreateEnquiryInput) {
         percentage: profile?.academic?.percentage ?? null,
         passingYear: profile?.academic?.passingYear ?? null,
         entranceExams: profile?.academic?.entranceExams ?? [],
+        marks: { class10: profile?.marks?.class10?.percentage ?? null, class12: profile?.marks?.class12?.percentage ?? null, graduation: profile?.marks?.graduation?.percentage ?? null },
       },
       preferences,
       feeEstimates: await feeSnapshot(input.colleges, input.courses),
@@ -109,6 +113,8 @@ export async function createEnquiry(req: Request, input: CreateEnquiryInput) {
   }
   await addEvent(created._id, { type: 'created', visibility: 'student', actor: eventActor(req), toStatus: 'NEW', body: 'Enquiry received.' });
   await audit(actorFrom(req), 'enquiry.created', { type: 'enquiry', id: String(created._id) }, req, { reference: created.reference });
+  // Optional (site setting): hand the enquiry to the least busy active counsellor. Never blocks the enquiry.
+  await (await import('./counsellor.service.js')).autoAssign(created._id).catch(() => null);
 
   // Notifications (queued; a mail problem never fails the enquiry).
   const e = created.toObject() as Lean;
@@ -144,6 +150,31 @@ export async function studentMessage(req: Request, reference: string, body: stri
     await safeEmail({ to, template: 'enquiry_message', params: { reference: e.reference, from: e.studentSnapshot.name, body, link: adminEnquiryLink(e._id) }, dedupeKey: `enq-msg:${String(ev._id)}:${to}` });
   }
   return toStudentEnquiry({ ...e, lastActivityAt: new Date() });
+}
+
+const SLOT_LABELS: Record<string, string> = { any: 'any time', morning: 'morning (9am–12pm)', afternoon: 'afternoon (12pm–4pm)', evening: 'evening (4pm–7pm)' };
+
+// The student asks for a phone call or a counselling session. The counsellor (or the team) is told, the request
+// shows on the enquiry until someone acts on it, and the follow-up date moves to the requested day if sooner.
+export async function requestCallback(req: Request, reference: string, input: { kind: 'callback' | 'counselling'; preferredDate: Date | null; slot: 'any' | 'morning' | 'afternoon' | 'evening'; mode: 'phone' | 'video' | 'office'; note: string }) {
+  const e = await ownEnquiry(req, reference);
+  if (!isOpen(e.status)) throw new ApiError(409, 'ENQUIRY_FINISHED', 'This enquiry is finished. Start a new enquiry if you need more help.');
+  const now = new Date();
+  const request = { ...input, requestedAt: now, handledAt: null };
+  const due = input.preferredDate && input.preferredDate > now ? input.preferredDate : now;
+  const followUpAt = e.followUpAt && e.followUpAt < due ? e.followUpAt : due;
+  await EnquiryModel.updateOne({ _id: e._id }, { $set: { callbackRequest: request, followUpAt, lastActivityAt: now } });
+  const when = [input.preferredDate ? input.preferredDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }) : 'as soon as possible', SLOT_LABELS[input.slot]].join(', ');
+  const what = input.kind === 'callback' ? 'Phone call requested' : `Counselling session requested (${input.mode})`;
+  const body = [`${what}: ${when}.`, input.note].filter(Boolean).join(' ');
+  const ev = await addEvent(e._id, { type: 'callback_request', visibility: 'student', actor: eventActor(req), body, meta: { kind: input.kind, slot: input.slot, mode: input.mode, preferredDate: input.preferredDate } });
+  const counsellor = e.assignedTo ? await UserModel.findById(e.assignedTo).select('email').lean() : null;
+  const recipients = counsellor ? [counsellor.email] : [...new Set([...(await counsellors()).map((a) => a.email), ...env.ADMIN_NOTIFY_EMAILS])];
+  for (const to of recipients) {
+    await safeEmail({ to, template: 'enquiry_message', params: { reference: e.reference, from: e.studentSnapshot.name, body, link: adminEnquiryLink(e._id) }, dedupeKey: `enq-callback:${String(ev._id)}:${to}` });
+  }
+  await audit(actorFrom(req), 'enquiry.callback_requested', { type: 'enquiry', id: String(e._id) }, req, { kind: input.kind });
+  return toStudentEnquiry({ ...e, callbackRequest: request, followUpAt, lastActivityAt: now });
 }
 
 // Students can withdraw their own open enquiry.

@@ -14,7 +14,8 @@ export async function enquiryWorld() {
   const { college } = await makeCollege({ slug: 'alpha', name: 'Alpha Institute', location: p.noida._id, course: p.btech._id, tuitionPerYear: 100_000 });
   const admin = await createAdmin();
   const student = await registerStudent();
-  expect((await student.c.put('/api/students/me/profile', profile)).status).toBe(200);
+  const saved = await student.c.put("/api/students/me/profile", profile);
+  expect(saved.status, JSON.stringify(saved.body)).toBe(200);
   return { p, college, admin, student };
 }
 

@@ -48,4 +48,11 @@ export async function counsellors() {
   return UserModel.find({ role: 'admin', status: 'active', permissions: 'enquiries.manage' }).select('name email').sort({ name: 1 }).lean();
 }
 
+// Everyone an enquiry can be assigned to: active counsellors and admins who handle enquiries. Counsellors are
+// not sent other students' new enquiries; they hear only about the ones assigned to them.
+export const ASSIGNABLE = { status: 'active', $or: [{ role: 'counsellor' }, { role: 'admin', permissions: 'enquiries.manage' }] };
+export async function assignableCounsellors() {
+  return UserModel.find(ASSIGNABLE).select('name email role').sort({ name: 1 }).lean();
+}
+
 export const statusLabel = (s: EnquiryStatus) => STUDENT_LABELS[s];

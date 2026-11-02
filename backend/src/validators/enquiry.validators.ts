@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { APPLICATION_STATUSES, EVIDENCE_TYPES } from '../models/Admission.js';
 import { APPOINTMENT_MODES, APPOINTMENT_STATUSES } from '../models/Appointment.js';
-import { DOCUMENT_STATUSES, ENQUIRY_STATUSES, INSTITUTION_TYPES } from '../models/Enquiry.js';
+import { CALLBACK_KINDS, CALLBACK_TIMES, DOCUMENT_STATUSES, ENQUIRY_STATUSES, INSTITUTION_TYPES, LEAD_SOURCES } from '../models/Enquiry.js';
 import { objectIdSchema, pagination } from './common.js';
 
 const text = (max: number) => z.string().trim().max(max);
@@ -35,6 +35,10 @@ export const createEnquiryBody = z
     intake: text(40).default(''),
     entranceExamNotes: text(500).default(''),
     counsellingRequest: text(2000).default(''),
+    // Where the student came from, and when they prefer a call.
+    source: z.enum(LEAD_SOURCES).default('direct'),
+    campaign: z.string().trim().regex(/^[A-Za-z0-9 _.-]{0,60}$/, 'Invalid campaign name').default(''),
+    callbackTime: z.enum(CALLBACK_TIMES).default('any'),
   })
   .strict();
 export type CreateEnquiryInput = z.infer<typeof createEnquiryBody>;
@@ -42,6 +46,21 @@ export type CreateEnquiryInput = z.infer<typeof createEnquiryBody>;
 export const messageBody = z.object({ body: text(2000).min(1, 'Write a message') }).strict();
 export const reasonBody = z.object({ reason: text(500).min(3, 'Give a short reason') }).strict();
 export const noteBody = z.object({ note: text(500).default('') }).strict();
+
+// A student asks for a phone call or a counselling session.
+export const callbackRequestBody = z
+  .object({
+    kind: z.enum(CALLBACK_KINDS),
+    preferredDate: z.coerce
+      .date()
+      .refine((d) => d.getTime() >= Date.now() - 86_400_000 && d.getTime() <= Date.now() + 60 * 86_400_000, 'Choose a date within the next 60 days')
+      .nullable()
+      .default(null),
+    slot: z.enum(CALLBACK_TIMES).default('any'),
+    mode: z.enum(['phone', 'video', 'office']).default('phone'),
+    note: text(500).default(''),
+  })
+  .strict();
 
 // ---- Admin ----
 
@@ -59,10 +78,15 @@ export const adminEnquiriesQuery = z
     from: isoDate.optional(),
     to: isoDate.optional(),
     followUpDue: z.literal('yes').optional(),
+    // Quick views: new enquiries, today's calls, overdue follow-ups, confirmed admissions, callback requests.
+    quick: z.enum(['new', 'today', 'overdue', 'admitted', 'callback']).optional(),
+    source: z.enum(LEAD_SOURCES).optional(),
     sort: z.enum(['newest', 'oldest', 'activity', 'follow_up']).default('newest'),
     ...pagination,
   })
   .strict();
+// The same filters for a CSV export (no paging; capped on the server).
+export const exportEnquiriesQuery = adminEnquiriesQuery.omit({ page: true, limit: true });
 
 export const enquiryPatch = z
   .object({ assignedTo: objectIdSchema.nullable().optional(), followUpAt: isoDate.nullable().optional() })

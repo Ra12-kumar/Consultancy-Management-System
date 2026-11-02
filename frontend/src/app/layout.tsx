@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "EduPath Consultancy: higher-education admissions in India", template: "%s · EduPath Consultancy" },
+  title: { default: "Udaan: higher-education admissions in India", template: "%s · Udaan" },
   description: "Explore courses, compare colleges, discover scholarships, and plan your higher education with expert guidance.",
 };
 

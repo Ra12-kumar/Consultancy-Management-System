@@ -5,37 +5,36 @@ import { useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Alert, Card, Skeleton } from "@/components/ui/Feedback";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { hardNavigate } from "@/lib/navigation";
 import { useApiData } from "@/hooks/useApiData";
 import { apiGet, apiPost } from "@/services/api";
 import { StatusBadge } from "@/features/enquiry/shared";
 import type { ApiError, Profile } from "@/types/api";
 import type { EnquirySummary } from "@/types/enquiry";
+import { CounsellorCard, Recommended, SupportCard } from "./DashboardExtras";
 
-function VerifyBanner({ email }: { email: string }) {
-  const [state, setState] = useState<{ busy: boolean; message?: string; error?: string }>({ busy: false });
+export function VerifyBanner({ email }: { email: string }) {
+  const [state, setState] = useState<{ busy: boolean; error?: string }>({ busy: false });
   return (
     <Alert tone="warning" title="Please verify your email address">
-      We sent a verification link to {email}. You need a verified email to submit admission enquiries and scholarship applications.
+      You need a verified email ({email}) to submit admission enquiries and scholarship applications. We will email you a 6-digit code.
       <div className="mt-3">
-        {state.message ? (
-          <span className="font-medium">{state.message}</span>
-        ) : (
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={state.busy}
-            onClick={async () => {
-              setState({ busy: true });
-              try {
-                setState({ busy: false, message: (await apiPost<{ message: string }>("/auth/resend-verification", { email })).message });
-              } catch (err) {
-                setState({ busy: false, error: (err as ApiError).message });
-              }
-            }}
-          >
-            {state.busy ? "Sending…" : "Send a new link"}
-          </Button>
-        )}
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={state.busy}
+          onClick={async () => {
+            setState({ busy: true });
+            try {
+              await apiPost<{ message: string }>("/auth/resend-verification", { email });
+              hardNavigate(`/verify-email?sent=1&email=${encodeURIComponent(email)}`);
+            } catch (err) {
+              setState({ busy: false, error: (err as ApiError).message });
+            }
+          }}
+        >
+          {state.busy ? "Sending…" : "Send me a code"}
+        </Button>
         {state.error && <p className="mt-2 text-danger">{state.error}</p>}
       </div>
     </Alert>
@@ -98,7 +97,7 @@ export default function StudentDashboard() {
               [user.emailVerified, "Verify your email address"],
               [completion === 100, "Complete your academic profile"],
               [false, <Link key="c" href="/colleges" className="underline">Explore and compare colleges</Link>],
-              [Boolean(enquiries.data?.length), <Link key="e" href="/enquire" className="underline">Submit your admission enquiry</Link>],
+              [Boolean(enquiries.data?.length), <Link key="e" href="/enquire?source=direct" className="underline">Submit your admission enquiry</Link>],
             ].map(([done, label], i) => (
               <li key={i} className="flex items-center gap-2">
                 <span aria-hidden="true" className={`inline-flex size-5 items-center justify-center rounded-full text-[10px] font-bold ${done ? "bg-success text-white" : "bg-surface-2 text-muted"}`}>
@@ -110,6 +109,8 @@ export default function StudentDashboard() {
             ))}
           </ol>
         </Card>
+        <CounsellorCard enquiries={enquiries.status === "error" ? [] : (enquiries.data ?? null)} />
+        <SupportCard />
         <Card className="md:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-semibold">My enquiries</h2>
@@ -138,6 +139,7 @@ export default function StudentDashboard() {
           )}
         </Card>
       </div>
+      <Recommended />
     </div>
   );
 }

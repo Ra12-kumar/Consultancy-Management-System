@@ -26,8 +26,9 @@ describe('API documentation', () => {
   it('every student write needs a session and the student role; public routes are reads (plus sign-in flows)', () => {
     const ops = operations();
     const publicWrites = ops.filter((o) => !o.access.auth && o.method !== 'get').map((o) => o.path);
-    // Sign-in flows, plus the Razorpay webhook (verified by signature instead of a session).
-    expect(publicWrites.filter((p) => !p.startsWith('/api/auth/'))).toEqual(['/api/payments/webhook']);
+    // Sign-in flows, the Razorpay webhook (verified by signature instead of a session) and the landing-page
+    // callback request (rate limited, consent required).
+    expect(publicWrites.filter((p) => !p.startsWith('/api/auth/')).sort()).toEqual(['/api/leads/callback', '/api/payments/webhook']);
     for (const prefix of ['/api/enquiries', '/api/appointments', '/api/scholarship-applications', '/api/feedback', '/api/students/me']) {
       const writes = ops.filter((o) => o.path.startsWith(prefix) && o.method !== 'get');
       expect(writes.length, prefix).toBeGreaterThan(0);

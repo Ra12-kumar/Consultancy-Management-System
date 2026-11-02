@@ -45,6 +45,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.resolve(process.cwd(), ".."),
   partialPrefetching: true,
   poweredByHeader: false,
+  // Development: lets a phone on the same Wi-Fi open the dev server at FRONTEND_URL (e.g. http://192.168.x.x:3000).
+  allowedDevOrigins: [new URL(process.env.FRONTEND_URL || "http://localhost:3000").hostname],
   // The API docs (Swagger UI, served by the backend at /api/docs/) need their trailing slash kept.
   skipTrailingSlashRedirect: true,
   // Same-origin API: session cookies stay first-party and the browser never needs CORS.

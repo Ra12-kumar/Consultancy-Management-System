@@ -35,12 +35,12 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("enquiry form", () => {
   it("validates each step and sends only the allowed fields (paise, with an idempotency key)", () => {
-    const d = { courses: [], specialization: "", locations: [], colleges: [], institutionTypes: [], budget: "6,00,000", hostel: true, scholarship: false, admissionYear: String(new Date().getFullYear()), intake: "July", entranceExamNotes: "", counsellingRequest: " call me " };
+    const d = { courses: [], specialization: "", locations: [], colleges: [], institutionTypes: [], budget: "6,00,000", hostel: true, scholarship: false, admissionYear: String(new Date().getFullYear()), intake: "July", entranceExamNotes: "", counsellingRequest: " call me ", callbackTime: "evening" as const, source: "featured_college" as const, campaign: "" };
     expect(validateStep(1, d).courses).toBe("Choose at least one course");
     expect(validateStep(2, { ...d, admissionYear: "1999" }).admissionYear).toBeTruthy();
     expect(validateStep(2, { ...d, budget: "lots" }).budget).toBeTruthy();
     const body = enquiryPayload({ ...d, courses: ["k1"], colleges: [{ id: "c1", name: "Alpha", isSample: false }] }, "key-12345678");
-    expect(body).toMatchObject({ idempotencyKey: "key-12345678", courses: ["k1"], colleges: ["c1"], budgetMinor: 60_000_000, counsellingRequest: "call me" });
+    expect(body).toMatchObject({ idempotencyKey: "key-12345678", courses: ["k1"], colleges: ["c1"], budgetMinor: 60_000_000, counsellingRequest: "call me", callbackTime: "evening", source: "featured_college" });
     expect(Object.keys(body)).not.toEqual(expect.arrayContaining(["status"]));
     expect(body).not.toHaveProperty("reference");
   });
@@ -104,6 +104,8 @@ describe("student enquiry view", () => {
       status: "DOCUMENTS_PENDING",
       statusLabel: "Documents needed",
       studentMessage: "Please send your marksheet.",
+      callbackTime: "any",
+      callbackRequest: null,
       counsellor: "Ravi Counsellor",
       createdAt: "2026-10-01T10:00:00.000Z",
       lastActivityAt: "2026-10-02T10:00:00.000Z",

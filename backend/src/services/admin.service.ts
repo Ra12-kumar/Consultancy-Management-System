@@ -10,6 +10,7 @@ import { actorFrom, audit, type Actor } from './audit.service.js';
 import { catalogCounts } from './catalog.service.js';
 import { enquiryCounts, type DashboardFilter } from './enquiryAdmin.service.js';
 import { scholarshipCounts } from './scholarship.service.js';
+import { platformTotals } from './enquiryReports.service.js';
 import { enqueueEmail } from './email.service.js';
 import { endAllSessions } from './session.service.js';
 import { issueToken } from './token.service.js';
@@ -79,7 +80,7 @@ export async function listStudents({ q, verified, sort, page, limit }: { q?: str
 
 export async function dashboardSummary(filter: DashboardFilter = {}) {
   const weekAgo = new Date(Date.now() - 7 * 86_400_000);
-  const [students, verified, newThisWeek, recent, emailCounts, catalog, enquiries, scholarships] = await Promise.all([
+  const [students, verified, newThisWeek, recent, emailCounts, catalog, enquiries, scholarships, totals] = await Promise.all([
     UserModel.countDocuments({ role: 'student' }),
     UserModel.countDocuments({ role: 'student', emailVerifiedAt: { $ne: null } }),
     UserModel.countDocuments({ role: 'student', createdAt: { $gte: weekAgo } }),
@@ -88,9 +89,10 @@ export async function dashboardSummary(filter: DashboardFilter = {}) {
     catalogCounts(),
     enquiryCounts(filter),
     scholarshipCounts(filter),
+    platformTotals(),
   ]);
   const email = Object.fromEntries(EMAIL_STATUSES.map((s) => [s, emailCounts.find((c) => c._id === s)?.n ?? 0]));
-  return { students: { total: students, verified, unverified: students - verified, newThisWeek }, recentStudents: recent.map(toPublicUser), email: { ...email, mode: mailHealth().mode }, catalog, ...enquiries, scholarships };
+  return { students: { total: students, verified, unverified: students - verified, newThisWeek }, recentStudents: recent.map(toPublicUser), email: { ...email, mode: mailHealth().mode }, catalog, ...enquiries, scholarships, totals };
 }
 
 // ---- Email delivery log (no bodies, links or secrets) ----
@@ -108,7 +110,7 @@ export async function listDeliveries({ status, template, page, limit }: { status
 
 export function emailStatus() {
   const h = mailHealth();
-  return { mode: h.mode, provider: env.SMTP_HOST ?? null, sender: env.EMAIL_FROM ?? null, missing: h.missing, lastCheck: h.lastVerify };
+  return { mode: h.mode, provider: env.brevoApi ? 'Brevo API' : (env.SMTP_HOST ?? null), sender: env.EMAIL_FROM ?? null, missing: h.missing, lastCheck: h.lastVerify };
 }
 
 // ---- Audit log ----

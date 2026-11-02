@@ -1,0 +1,27 @@
+# Public entry (ingress-nginx): /api -> API pods, everything else -> web pods. TLS via cert-manager (overlay sets
+# the host and certificate). The controller replaces client-sent X-Forwarded-For with the real address only when
+# configured to (use-forwarded-headers=false, the default); the API trusts exactly one hop (TRUST_PROXY=1).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: education-consultancy
+  annotations:
+    # Uploads go up to 10 MB (brochures).
+    nginx.ingress.kubernetes.io/proxy-body-size: 12m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: udaan.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: web, port: { name: http } }

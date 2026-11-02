@@ -68,7 +68,8 @@ export async function scheduleAppointment(enquiryId: string, input: { startsAt: 
   await addEvent(e._id, { type: 'appointment', visibility: 'student', actor: eventActor(req), body: `Counselling session booked for ${fmtIST(input.startsAt)} (${MODES[input.mode]}).` });
   await audit(actorFrom(req), 'appointment.scheduled', { type: 'appointment', id: String(a._id) }, req, { enquiry: enquiryId });
   await emailStudent(a.toObject() as Lean, 'appointment_scheduled');
-  await autoStatus(e, 'COUNSELLING_SCHEDULED', ['NEW', 'CONTACTED'], eventActor(req), 'Counselling session booked');
+  if (e.callbackRequest?.requestedAt && !e.callbackRequest.handledAt) await EnquiryModel.updateOne({ _id: e._id }, { $set: { 'callbackRequest.handledAt': new Date() } });
+  await autoStatus(e, 'COUNSELLING_SCHEDULED', ['NEW', 'CONTACT_PENDING', 'CONTACTED', 'INTERESTED'], eventActor(req), 'Counselling session booked');
   return enquiryDetail(enquiryId);
 }
 

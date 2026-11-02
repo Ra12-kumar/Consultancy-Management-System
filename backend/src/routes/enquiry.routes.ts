@@ -13,6 +13,7 @@ enquiryRouter.post('/', ...write, validate({ body: v.createEnquiryBody }), c.cre
 enquiryRouter.get('/', ...student, c.myEnquiries);
 enquiryRouter.get('/:reference', ...student, validate({ params: v.referenceParams }), c.myEnquiry);
 enquiryRouter.post('/:reference/messages', ...write, validate({ params: v.referenceParams, body: v.messageBody }), c.studentMessage);
+enquiryRouter.post('/:reference/callback-request', ...write, validate({ params: v.referenceParams, body: v.callbackRequestBody }), c.requestCallback);
 enquiryRouter.post('/:reference/withdraw', ...write, validate({ params: v.referenceParams, body: v.reasonBody }), c.withdraw);
 
 export const appointmentRouter = Router();
@@ -35,6 +36,8 @@ const byId = { params: v.idParams };
 
 adminEnquiryRouter.get('/counsellors', manage, c.counsellors);
 adminEnquiryRouter.get('/enquiries', manage, validate({ query: v.adminEnquiriesQuery }), c.list);
+// Personal data leaves the system: needs both permissions, and every export is audited.
+adminEnquiryRouter.get('/enquiries/export', requirePermission('enquiries.manage', 'reports.export'), validate({ query: v.exportEnquiriesQuery }), c.exportCsv);
 adminEnquiryRouter.get('/enquiries/:id', manage, validate(byId), c.detail);
 adminEnquiryRouter.patch('/enquiries/:id', manage, validate({ ...byId, body: v.enquiryPatch }), c.update);
 adminEnquiryRouter.post('/enquiries/:id/status', manage, validate({ ...byId, body: v.statusBody }), c.status);

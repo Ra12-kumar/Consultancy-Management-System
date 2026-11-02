@@ -27,8 +27,16 @@ const COMPLETION_FIELDS: Array<(p: ProfileInput) => unknown> = [
   (p) => p.academic.score,
 ];
 
-function toProfile(doc: { personal?: unknown; academic?: unknown; updatedAt?: Date } | null) {
-  const profile = (doc ?? { personal: {}, academic: {} }) as { personal?: Partial<ProfileInput['personal']>; academic?: Partial<ProfileInput['academic']> & { percentage?: number | null }; updatedAt?: Date };
+// The saved marks with every field present (older profiles have none).
+export function marksOf(m: unknown) {
+  const x = (m ?? {}) as Partial<typeof EMPTY_MARKS>;
+  return { class10: { ...EMPTY_MARKS.class10, ...x.class10 }, class12: { ...EMPTY_MARKS.class12, ...x.class12 }, graduation: { ...EMPTY_MARKS.graduation, ...x.graduation } } as { class10: { percentage: number | null; board: string; year: number | null }; class12: { percentage: number | null; board: string; year: number | null; stream: string }; graduation: { percentage: number | null; degree: string; year: number | null } };
+}
+
+const EMPTY_MARKS = { class10: { percentage: null, board: '', year: null }, class12: { percentage: null, board: '', year: null, stream: '' }, graduation: { percentage: null, degree: '', year: null } };
+
+function toProfile(doc: { personal?: unknown; academic?: unknown; preferences?: unknown; marks?: unknown; updatedAt?: Date } | null) {
+  const profile = (doc ?? { personal: {}, academic: {} }) as { personal?: Partial<ProfileInput['personal']>; academic?: Partial<ProfileInput['academic']> & { percentage?: number | null }; preferences?: { course?: string; location?: string }; updatedAt?: Date };
   const p: ProfileInput = {
     personal: { city: '', state: '', guardianName: '', guardianPhone: '', preferredContact: 'email', ...profile.personal },
     academic: { highestQualification: null, course: '', institution: '', boardOrUniversity: '', passingYear: null, score: null, entranceExams: [], ...profile.academic },
@@ -41,6 +49,8 @@ function toProfile(doc: { personal?: unknown; academic?: unknown; updatedAt?: Da
   return {
     personal: p.personal,
     academic: { ...p.academic, entranceExams: p.academic.entranceExams.map(({ name, score, year }) => ({ name, score, year })), percentage: profile.academic?.percentage ?? null },
+    preferences: { course: profile.preferences?.course ?? '', location: profile.preferences?.location ?? '' },
+    marks: marksOf(doc?.marks),
     completion: Math.round((done / COMPLETION_FIELDS.length) * 100),
     updatedAt: profile.updatedAt ?? null,
   };
@@ -65,7 +75,7 @@ export async function getProfile(userId: string) {
 export async function saveProfile(userId: string, input: ProfileInput) {
   const doc = await StudentProfileModel.findOneAndUpdate(
     { user: userId },
-    { $set: { personal: input.personal, academic: { ...input.academic, percentage: normalisedPercentage(input.academic.score) } } },
+    { $set: { personal: input.personal, academic: { ...input.academic, percentage: normalisedPercentage(input.academic.score) }, ...(input.preferences && { preferences: input.preferences }), ...(input.marks && { marks: input.marks }) } },
     { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
   ).lean();
   return toProfile(doc);

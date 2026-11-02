@@ -8,15 +8,18 @@ export type TemplateName = 'welcome_verify' | 'verify_email' | 'reset_password' 
   | 'appointment_scheduled' | 'appointment_updated' | 'appointment_cancelled' | 'appointment_reminder' | 'appointment_change_request'
   | 'scholarship_received' | 'scholarship_new_admin' | 'scholarship_update' | 'scholarship_decision'
   | 'feedback_ack' | 'feedback_admin' | 'feedback_response' | 'data_request_admin' | 'data_request_update'
-  | 'announcement' | 'payment_request' | 'payment_receipt' | 'security_notice';
+  | 'announcement' | 'payment_request' | 'payment_receipt' | 'security_notice'
+  | 'import_report' | 'counsellor_invite' | 'followup_digest' | 'callback_lead';
 type Params = Record<string, string>;
 type Rendered = { subject: string; html: string; text: string };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
-function layout({ heading, paragraphs, action, footnote }: { heading: string; paragraphs: string[]; action?: { label: string; url: string }; footnote?: string }): { html: string; text: string } {
+function layout({ heading, paragraphs, code, action, footnote }: { heading: string; paragraphs: string[]; code?: string; action?: { label: string; url: string }; footnote?: string }): { html: string; text: string } {
   const app = esc(env.APP_NAME);
   const body = paragraphs.map((p) => `<p style="margin:0 0 16px;font-size:15px;line-height:24px;color:#1f2a44">${esc(p)}</p>`).join('');
+  // A one-time code, large and easy to copy.
+  const codeBox = code ? `<p style="margin:0 0 20px;font-size:32px;line-height:40px;font-weight:700;letter-spacing:8px;color:#0B1F44;font-family:Consolas,monospace">${esc(code)}</p>` : '';
   const button = action
     ? `<table role="presentation" cellspacing="0" cellpadding="0" style="margin:8px 0 24px"><tr><td style="border-radius:8px;background:#C9A227"><a href="${esc(action.url)}" style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:700;color:#0B1F44;text-decoration:none;border-radius:8px">${esc(action.label)}</a></td></tr></table>
        <p style="margin:0 0 16px;font-size:12px;line-height:18px;color:#5b6478">If the button does not work, copy this link into your browser:<br><span style="word-break:break-all;color:#0B1F44">${esc(action.url)}</span></p>`
@@ -27,12 +30,12 @@ function layout({ heading, paragraphs, action, footnote }: { heading: string; pa
 <tr><td style="background:#0B1F44;padding:20px 28px;font-size:18px;font-weight:700;color:#ffffff">${app}<span style="color:#C9A227">.</span></td></tr>
 <tr><td style="padding:28px">
 <h1 style="margin:0 0 16px;font-size:22px;line-height:30px;color:#0B1F44">${esc(heading)}</h1>
-${body}${button}
+${body}${codeBox}${button}
 ${footnote ? `<p style="margin:0;font-size:12px;line-height:18px;color:#5b6478">${esc(footnote)}</p>` : ''}
 </td></tr>
 <tr><td style="background:#f8f9fc;padding:16px 28px;font-size:11px;line-height:16px;color:#7a8296">You received this email from ${app} about your account. Please do not reply with passwords or personal documents.</td></tr>
 </table></td></tr></table></body></html>`;
-  const text = [heading, '', ...paragraphs, ...(action ? ['', `${action.label}: ${action.url}`] : []), ...(footnote ? ['', footnote] : []), '', `— ${env.APP_NAME}`].join('\n');
+  const text = [heading, '', ...paragraphs, ...(code ? ['', `Your code: ${code}`] : []), ...(action ? ['', `${action.label}: ${action.url}`] : []), ...(footnote ? ['', footnote] : []), '', `— ${env.APP_NAME}`].join('\n');
   return { html, text };
 }
 
@@ -49,19 +52,21 @@ function renderBase(template: TemplateName, p: Params): Rendered {
         subject: `Welcome to ${app}: please verify your email`,
         ...layout({
           heading: `Welcome, ${p.name}!`,
-          paragraphs: ['Thank you for registering. Please confirm your email address to activate your student account and submit admission enquiries.'],
-          action: { label: 'Verify my email', url: p.link! },
-          footnote: 'This link expires in 24 hours and can be used once. If you did not create this account, you can ignore this email.',
+          paragraphs: ['Thank you for registering. Enter this code on the verification page to activate your student account:'],
+          code: p.code!,
+          action: { label: 'Open the verification page', url: p.link! },
+          footnote: 'The code expires in 10 minutes and can be used once. Never share it with anyone, including our staff. If you did not create this account, you can ignore this email.',
         }),
       };
     case 'verify_email':
       return {
-        subject: `${app}: verify your email address`,
+        subject: `${app}: your email verification code`,
         ...layout({
           heading: 'Confirm your email address',
-          paragraphs: [`Hi ${p.name}, please confirm this email address for your ${app} account.`],
-          action: { label: 'Verify my email', url: p.link! },
-          footnote: 'This link expires in 24 hours and can be used once.',
+          paragraphs: [`Hi ${p.name}, enter this code to confirm the email address of your ${app} account:`],
+          code: p.code!,
+          action: { label: 'Open the verification page', url: p.link! },
+          footnote: 'The code expires in 10 minutes and can be used once. Never share it with anyone, including our staff.',
         }),
       };
     case 'reset_password':
@@ -80,6 +85,35 @@ function renderBase(template: TemplateName, p: Params): Rendered {
         ...layout({
           heading: 'Your password was changed',
           paragraphs: [`Hi ${p.name}, the password for your ${app} account was just changed and every device was signed out.`, 'If this was not you, reset your password immediately and contact us.'],
+        }),
+      };
+    case 'counsellor_invite':
+      return {
+        subject: `${app}: set up your counsellor account`,
+        ...layout({
+          heading: `Hi ${p.name}, you have been added as a counsellor`,
+          paragraphs: [`${p.invitedBy} added you as a counsellor at ${app}. Choose your password to start working on the enquiries assigned to you.`],
+          action: { label: 'Set my password', url: p.link! },
+          footnote: 'This link expires in 72 hours and can be used once.',
+        }),
+      };
+    case 'callback_lead':
+      // The subject is stored with the delivery record, so it never includes the phone number.
+      return {
+        subject: `${app}: callback requested by ${p.name}`,
+        ...layout({
+          heading: 'New callback request from the website',
+          paragraphs: [`${p.name} (${p.role}) asked for a call back.`, `Mobile: ${p.mobile}`, `Current education: ${p.education}. Interested in: ${p.interest}.`, 'They agreed to be contacted about this request only.'],
+          action: { label: 'Open enquiries', url: p.link! },
+        }),
+      };
+    case 'followup_digest':
+      return {
+        subject: `${app}: ${p.today} follow-up${p.today === '1' ? '' : 's'} today, ${p.overdue} overdue`,
+        ...layout({
+          heading: `Good morning, ${p.name}`,
+          paragraphs: [`You have ${p.today} follow-up${p.today === '1' ? '' : 's'} due today and ${p.overdue} overdue on your assigned enquiries.`],
+          action: { label: 'Open my follow-ups', url: p.link! },
         }),
       };
     case 'admin_invite':
@@ -305,7 +339,7 @@ export function renderStage7Email(template: TemplateName, p: Params): Rendered |
         subject: `Payment request ${p.reference}: ${p.amount}`,
         ...layout({
           heading: 'A payment request is waiting',
-          paragraphs: [`Hi ${p.name}, ${p.description || 'your consultancy service charge'} of ${p.amount} is due (reference ${p.reference}).`, 'This is EduPath’s own service charge. Official college fees are always paid to the college directly.'],
+          paragraphs: [`Hi ${p.name}, ${p.description || 'your consultancy service charge'} of ${p.amount} is due (reference ${p.reference}).`, 'This is Udaan’s own service charge. Official college fees are always paid to the college directly.'],
           action: { label: 'Review and pay', url: p.link! },
         }),
       };
@@ -316,6 +350,15 @@ export function renderStage7Email(template: TemplateName, p: Params): Rendered |
           heading: 'Thank you, we received your payment',
           paragraphs: [`Hi ${p.name}, we received ${p.amount} for ${p.description || 'the consultancy service charge'}.`, `Receipt number: ${p.receipt}. Payment reference: ${p.reference}.`],
           action: { label: 'View receipt', url: p.link! },
+        }),
+      };
+    case 'import_report':
+      return {
+        subject: `College data import ${p.status!.replace(/_/g, ' ')}: ${p.file}`,
+        ...layout({
+          heading: `Import ${p.status!.replace(/_/g, ' ')}`,
+          paragraphs: [`Hi ${p.name}, the import of ${p.file} from ${p.source} has ${p.status!.replace(/_/g, ' ')}.`, `Summary: ${p.summary}.`, 'Open the import centre for details, row errors and the review queue.'],
+          action: { label: 'Open college data imports', url: p.link! },
         }),
       };
     case 'security_notice':

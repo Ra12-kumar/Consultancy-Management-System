@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { AdminDashboard } from "@/features/admin/AdminScreens";
+import AdminWorkspaceDashboard from "@/features/admin/workspace/AdminWorkspaceDashboard";
 
 export const metadata: Metadata = { title: "Admin dashboard" };
 
 export default function Page() {
-  return <AdminDashboard />;
+  return <AdminWorkspaceDashboard />;
 }

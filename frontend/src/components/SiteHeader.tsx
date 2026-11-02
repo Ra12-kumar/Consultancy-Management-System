@@ -17,14 +17,14 @@ export const NAV = [
 
 function Logo() {
   return (
-    <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight" aria-label="EduPath Consultancy home">
+    <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight" aria-label="Udaan home">
       <span aria-hidden="true" className="inline-flex size-9 items-center justify-center rounded-xl bg-navy text-gold shadow-sm ring-1 ring-gold/40">
         <svg viewBox="0 0 24 24" className="size-5" fill="currentColor">
           <path d="M12 3 1 9l11 6 9-4.9V17h2V9L12 3Zm-6 9.6V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.4l-6 3.3-6-3.3Z" />
         </svg>
       </span>
       <span>
-        EduPath<span className="text-accent-text"> Consultancy</span>
+        Udaan
       </span>
     </Link>
   );

@@ -49,6 +49,22 @@
   - Brevo SMTP with STARTTLS, and credentials only in `.env`.
   - Token links in the outbox are AES-256-GCM encrypted. The admin delivery log never shows bodies or links, and provider keys are redacted from error text.
 
+## Registration checks (in place)
+- One account per email: emails are trimmed and lower-cased before saving, and the unique index `user_email_unique` enforces it in the database (parallel duplicate requests create one account; a repeat registration gets the same answer as a new one and the owner is emailed).
+- Server-side validation of every field (format, password strength, no unknown fields such as `role`).
+- The email domain must be able to receive mail (MX or address record; null MX refused), which stops typos and made-up domains before an account exists. Only the domain is looked up (system DNS, then 1.1.1.1/8.8.8.8 if the system resolver is unreachable); a DNS outage never blocks sign-up. The emailed code still proves the mailbox.
+- Passwords are stored only as argon2id hashes. Sign-in uses server-side sessions in HttpOnly cookies (no JWT): idle and absolute expiry, logout ends the session on the server, expired sessions get 401.
+
+## Email verification codes (in place)
+- 6-digit codes from a CSPRNG, stored only as an HMAC-SHA256 keyed from `SESSION_SECRET` (bound to the user and purpose), never logged; the emailed copy waits in the outbox encrypted.
+- 10-minute expiry, single use (atomic), 5 wrong guesses per code, resend cooldown 1 minute and 5 codes an hour, plus per-IP and per-email rate limits on `/verify-otp`.
+- Unknown emails, verified accounts, wrong, used and expired codes all get the same 400 `INVALID_CODE`. The "verify your email" answer at sign-in is given only after a correct password.
+- Students cannot sign in until verified; admins verify through their invitation link and never sign in with a code alone.
+
+## College photos (in place)
+- Admin uploads only (`catalog.manage`), type decided by the file's first bytes (JPEG/PNG/WebP), 5 MB, 12 per college, random file names, files outside any public folder.
+- The public image route serves only files stored as college photos, with `nosniff`, a sandboxing CSP and `inline` disposition; private student photos and documents are never reachable through it.
+
 ## Catalogue and pricing (Stage 2, in place)
 - **Separate permissions:** `catalog.manage` covers colleges, courses, locations and offerings; `pricing.manage` covers fees. The server refuses students and other admins.
 - **Nothing unverified goes public:**
@@ -128,3 +144,9 @@
 - **Admin MFA** (optional in the spec) is not implemented yet.
 - **Photo and document uploads** come in a later stage, with signature checks and private storage.
 - **Sensitive actions:** `requireVerifiedEmail` is ready for enquiries and applications in Stage 3.
+
+## Roles and data isolation (in place)
+- Three roles: student (own data only), counsellor (only enquiries assigned to them; 404 for any other), admin (fine-grained permissions). Roles come from the server (invitation code or admin action), never from a request.
+- Counsellors have no admin permissions: every `/api/admin` route refuses them (tested). They cannot reassign enquiries or confirm admissions. Deactivating a counsellor ends their sessions at once.
+- Request bodies and queries are validated strictly (unknown fields and operator objects such as `{"$ne": null}` are refused with 422), which blocks NoSQL operator injection.
+- Counsellor and admin actions on enquiries are recorded in the enquiry history and the audit log.

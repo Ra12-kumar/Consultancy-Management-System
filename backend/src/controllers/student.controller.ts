@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { recommendationsFor } from '../services/recommendation.service.js';
 import * as students from '../services/student.service.js';
 import { sendSuccess } from '../utils/response.js';
 import type { ProfileInput } from '../validators/student.validators.js';
@@ -19,4 +20,8 @@ export async function saveMyProfile(req: Request, res: Response) {
 }
 export async function getStudent(req: Request, res: Response) {
   sendSuccess(res, await students.getStudent(valid<{ id: string }>(req, 'params').id, req.user!));
+}
+
+export async function myRecommendations(req: Request, res: Response) {
+  sendSuccess(res, await recommendationsFor(req.user!.id));
 }

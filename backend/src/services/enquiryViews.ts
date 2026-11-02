@@ -65,8 +65,10 @@ export const toStudentEvent = (ev: Lean) => ({
   toStatus: (ev.toStatus as EnquiryStatus | null) ?? null,
   statusLabel: ev.toStatus ? STUDENT_LABELS[ev.toStatus as EnquiryStatus] : null,
   body: ev.body as string,
-  by: ev.actor?.role === 'student' ? 'You' : (ev.actor?.name ?? 'EduPath team'),
+  by: ev.actor?.role === 'student' ? 'You' : (ev.actor?.name ?? 'Udaan team'),
   createdAt: ev.createdAt as Date,
+  // Courses suggested by the counsellor, with the eligibility worked out when they were suggested.
+  ...(ev.type === 'recommendation' && { recommendations: ((ev.meta as { items?: unknown[] } | null)?.items ?? []) as Array<Record<string, unknown>> }),
 });
 
 export const toStudentApplication = (a: Lean) => ({
@@ -93,6 +95,11 @@ export const toStudentAppointment = (a: Lean, counsellorName: string, reference?
   counsellor: counsellorName,
 });
 
+const callbackRequestView = (e: Lean) => {
+  const r = e.callbackRequest;
+  return r?.requestedAt ? { kind: r.kind, preferredDate: r.preferredDate ?? null, slot: r.slot, mode: r.mode, note: r.note, requestedAt: r.requestedAt, handledAt: r.handledAt ?? null } : null;
+};
+
 export async function studentEnquirySummary(e: Lean) {
   const prefs = await preferenceNames(e);
   return { reference: e.reference, status: e.status, statusLabel: STUDENT_LABELS[e.status as EnquiryStatus], courses: prefs.courses, colleges: prefs.colleges, createdAt: e.createdAt, lastActivityAt: e.lastActivityAt };
@@ -113,6 +120,8 @@ export async function toStudentEnquiry(e: Lean) {
     statusLabel: STUDENT_LABELS[e.status as EnquiryStatus],
     studentMessage: e.studentMessage,
     counsellor: counsellor ? counsellor.name : null,
+    callbackTime: e.callbackTime ?? 'any',
+    callbackRequest: callbackRequestView(e),
     createdAt: e.createdAt,
     lastActivityAt: e.lastActivityAt,
     preferences: prefs,
@@ -173,6 +182,11 @@ export async function toAdminEnquiry(e: Lean) {
     assignedTo: assigned ? { id: String(assigned._id), name: assigned.name, email: assigned.email } : null,
     followUpAt: e.followUpAt ?? null,
     studentMessage: e.studentMessage,
+    source: e.source ?? 'direct',
+    campaign: e.campaign ?? '',
+    callbackTime: e.callbackTime ?? 'any',
+    callbackRequest: callbackRequestView(e),
+    lastContactAt: e.lastContactAt ?? null,
     createdAt: e.createdAt,
     lastActivityAt: e.lastActivityAt,
     timeline: (events as Lean[]).map((ev) => ({

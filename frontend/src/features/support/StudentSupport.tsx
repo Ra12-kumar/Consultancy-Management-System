@@ -194,7 +194,7 @@ export function FeedbackScreen() {
           <TextAreaField label="Your message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} maxLength={2000} required />
           <label className="flex items-start gap-2 text-sm">
             <input type="checkbox" className="mt-1" checked={form.publishConsent} onChange={(e) => setForm({ ...form, publishConsent: e.target.checked })} />
-            You may publish this on the EduPath website with my first name and city, if your team approves it. (Optional – you can change this later.)
+            You may publish this on the Udaan website with my first name and city, if your team approves it. (Optional – you can change this later.)
           </label>
           {state.error && <Alert>{state.error}</Alert>}
           {state.ok && <Alert tone="success">{state.ok}</Alert>}

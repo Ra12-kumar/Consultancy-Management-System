@@ -32,7 +32,7 @@ describe('health', () => {
   it('reports readiness with the database connected, without exposing connection details', async () => {
     const res = await request(app).get('/api/health/ready');
     expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({ status: 'ready', database: 'connected', mail: 'log-only' });
+    expect(res.body.data).toEqual({ status: 'ready', database: 'connected', mail: 'log-only', cache: 'disabled' });
     expect(JSON.stringify(res.body)).not.toMatch(/mongodb|127\.0\.0\.1|27017|education_consultancy|secret/i);
   });
 });
@@ -41,7 +41,22 @@ describe('API conventions', () => {
   it('returns a JSON 404 for unknown routes', async () => {
     const res = await request(app).get('/api/nope');
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ success: false, error: { code: 'NOT_FOUND', message: 'Route GET /api/nope not found' } });
+    expect(res.body).toEqual({ success: false, error: { code: 'NOT_FOUND', message: 'Route GET /api/nope not found' }, requestId: res.headers['x-request-id'] });
+  });
+
+  it('never sends stack traces or internal messages for unexpected errors, and gives the request id', async () => {
+    const { errorHandler } = await import('../src/middleware/errorHandler.js');
+    const express = (await import('express')).default;
+    const probe = express();
+    probe.use((req, _res, next) => ((req as unknown as { id: string }).id = 'req-test-123', next()));
+    probe.get('/boom', () => {
+      throw new Error('secret internal detail at C:\\server\\file.ts');
+    });
+    probe.use(errorHandler);
+    const res = await request(probe).get('/boom');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' }, requestId: 'req-test-123' });
+    expect(JSON.stringify(res.body)).not.toContain('secret');
   });
 
   it('validates input with 422 and field details', async () => {

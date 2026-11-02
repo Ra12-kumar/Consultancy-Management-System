@@ -1,6 +1,6 @@
 import mongoose, { type InferSchemaType } from 'mongoose';
 
-export const LOCATION_KINDS = ['region', 'state', 'city'] as const;
+export const LOCATION_KINDS = ['region', 'state', 'district', 'city'] as const;
 
 // A place students search by. A city lists its state and any regions (e.g. Delhi NCR, North India) as parents,
 // so searching a region finds colleges in every city under it.

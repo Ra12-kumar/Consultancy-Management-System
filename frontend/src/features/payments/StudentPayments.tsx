@@ -77,7 +77,7 @@ export function StudentPayments() {
 
   return (
     <div className="space-y-4">
-      <PageTitle title="Payments" subtitle="Payment requests for EduPath’s service charge. Official college fees are paid to the college directly." />
+      <PageTitle title="Payments" subtitle="Payment requests for Udaan’s service charge. Official college fees are paid to the college directly." />
       {state.ok && <Alert tone="success">{state.ok}</Alert>}
       {state.error && <Alert>{state.error}</Alert>}
       {!data.data ? (
@@ -112,7 +112,7 @@ export function StudentPayments() {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted">Payments are processed securely by Razorpay. EduPath never sees your card or bank details.</p>
+          <p className="text-xs text-muted">Payments are processed securely by Razorpay. Udaan never sees your card or bank details.</p>
         </>
       )}
     </div>
@@ -135,7 +135,7 @@ export function PaymentReceipt() {
       </p>
       <article className="mx-auto max-w-xl rounded-2xl border border-line bg-surface p-6 print:border-0">
         <p className="text-sm font-semibold tracking-widest text-accent-text uppercase">Payment receipt</p>
-        <h1 className="mt-1 text-2xl font-bold">EduPath Consultancy</h1>
+        <h1 className="mt-1 text-2xl font-bold">Udaan</h1>
         <dl className="mt-6 grid grid-cols-2 gap-y-3 text-sm">
           <dt className="text-muted">Receipt number</dt>
           <dd className="font-mono font-semibold">{p.receiptNumber}</dd>
@@ -155,7 +155,7 @@ export function PaymentReceipt() {
           <dt className="text-muted">Razorpay payment id</dt>
           <dd className="font-mono text-xs break-all">{p.razorpayPaymentId}</dd>
         </dl>
-        <p className="mt-6 text-xs text-muted">This receipt covers EduPath’s consultancy service charge only. It is not a receipt for any college fee.</p>
+        <p className="mt-6 text-xs text-muted">This receipt covers Udaan’s consultancy service charge only. It is not a receipt for any college fee.</p>
       </article>
       <div className="text-center print:hidden">
         <Button variant="secondary" onClick={() => window.print()}>

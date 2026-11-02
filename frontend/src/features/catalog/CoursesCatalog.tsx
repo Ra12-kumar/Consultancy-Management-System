@@ -15,6 +15,11 @@ export default function CoursesCatalog() {
       <p className="text-sm font-semibold tracking-widest text-accent-text uppercase">Courses</p>
       <h1 className="mt-1 text-3xl font-bold tracking-tight">Find your course</h1>
       <p className="mt-2 max-w-2xl text-muted">Choose a course to see the colleges that offer it, with eligibility and published fees.</p>
+      <p className="mt-4">
+        <Link href="/courses/browse" className="inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-fg hover:opacity-90">
+          Browse courses at colleges: filter by fees, place and eligibility
+        </Link>
+      </p>
       <div className="mt-8">
         {!courses.data ? (
           <LoadState status={courses.status} error={courses.error} reload={courses.reload} rows={4} />

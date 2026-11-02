@@ -40,3 +40,15 @@ export const pagination = {
   page: z.coerce.number().int().min(1).max(10_000).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 };
+
+// PATCH bodies: every field optional and WITHOUT its default. (Zod 4 fills an absent optional field with its
+// default, and `.partial()` keeps defaults, so a partial update would overwrite stored values with defaults.)
+export function patchOf<S extends z.ZodRawShape>(schema: z.ZodObject<S>) {
+  const shape: Record<string, z.ZodType> = {};
+  for (const [key, field] of Object.entries(schema.shape)) {
+    let f = field as z.ZodType;
+    while (f instanceof z.ZodDefault || f instanceof z.ZodPrefault) f = f.unwrap() as z.ZodType;
+    shape[key] = f.optional();
+  }
+  return z.object(shape) as unknown as z.ZodObject<{ [K in keyof S]: z.ZodOptional<S[K]> }>;
+}

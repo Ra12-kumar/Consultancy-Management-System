@@ -7,7 +7,9 @@ import { AUDIENCES, PAGE_SLUGS, PAYMENT_STATUSES } from '../models/Content.js';
 import * as mfa from '../services/mfa.service.js';
 import * as pay from '../services/payment.service.js';
 import * as site from '../services/settings.service.js';
+import { publicCache } from '../services/cache.service.js';
 import { sendSuccess } from '../utils/response.js';
+import { socialUrl } from '../validators/catalog.validators.js';
 import { objectIdSchema, pagination } from '../validators/common.js';
 
 const text = (max: number) => z.string().trim().max(max);
@@ -26,9 +28,9 @@ mfaRouter.post('/mfa/disable', authenticate, requireRole('admin'), validate({ bo
 
 // ---- Public site content: /api/site and /api/pages ----
 export const siteRouter = Router();
-siteRouter.get('/', async (_req, res) => sendSuccess(res, { ...(await site.getSiteSettings()), banners: await site.publicBanners(), payments: { enabled: pay.paymentsStatus().enabled } }));
+siteRouter.get('/', publicCache('site'), async (_req, res) => sendSuccess(res, { ...(await site.publicSiteSettings()), banners: await site.publicBanners(), payments: { enabled: pay.paymentsStatus().enabled } }));
 export const pagesRouter = Router();
-pagesRouter.get('/:slug', validate({ params: z.object({ slug: z.enum(PAGE_SLUGS) }).strict() }), async (req, res) => sendSuccess(res, await site.publicPage(v(req).params.slug)));
+pagesRouter.get('/:slug', publicCache('site'), validate({ params: z.object({ slug: z.enum(PAGE_SLUGS) }).strict() }), async (req, res) => sendSuccess(res, await site.publicPage(v(req).params.slug)));
 
 // ---- Student announcements (mounted on /api/students) ----
 export const studentAnnouncementsRouter = Router();
@@ -58,8 +60,19 @@ adminStage7Router.get('/settings/site', settings, async (_req, res) => sendSucce
 adminStage7Router.put(
   '/settings/site',
   settings,
-  validate({ body: z.object({ organisation: z.object({ name: text(120), supportEmail: z.union([z.literal(''), z.string().trim().toLowerCase().email().max(254)]), supportPhone: text(30), whatsapp: text(30), address: text(400), officeHours: text(200) }).partial().strict() }).strict() }),
-  async (req, res) => sendSuccess(res, await site.updateSiteSettings(v(req).body.organisation, req)),
+  validate({
+    body: z
+      .object({
+        organisation: z
+          .object({ name: text(120), supportEmail: z.union([z.literal(''), z.string().trim().toLowerCase().email().max(254)]), supportPhone: text(30), whatsapp: text(30), address: text(400), officeHours: text(200), instagram: socialUrl('instagram'), facebook: socialUrl('facebook') })
+          .partial()
+          .strict()
+          .default({}),
+        crm: z.object({ autoAssign: z.boolean() }).partial().strict().optional(),
+      })
+      .strict(),
+  }),
+  async (req, res) => sendSuccess(res, await site.updateSiteSettings(v(req).body.organisation, req, v(req).body.crm)),
 );
 adminStage7Router.get('/email-templates', settings, async (_req, res) => sendSuccess(res, await site.listTemplates()));
 adminStage7Router.put('/email-templates/:template', settings, validate({ params: z.object({ template: z.string().regex(/^[a-z_]{3,40}$/) }).strict(), body: z.object({ subject: text(160).default(''), intro: text(1000).default('') }).strict() }), async (req, res) =>

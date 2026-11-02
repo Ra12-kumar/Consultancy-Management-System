@@ -162,7 +162,7 @@ export async function reviewTestimonial(id: string, decision: 'approved' | 'reje
 // Public: approved, consented testimonials only, as first name and city.
 export async function publicTestimonials() {
   const items = await FeedbackModel.find({ publishConsent: true, 'testimonial.status': 'approved' }).sort({ 'testimonial.reviewedAt': -1 }).limit(6).lean();
-  return items.map((f) => ({ id: String(f._id), rating: f.rating, quote: f.message.length > 300 ? `${f.message.slice(0, 297)}…` : f.message, name: f.testimonial?.displayName || 'An EduPath student' }));
+  return items.map((f) => ({ id: String(f._id), rating: f.rating, quote: f.message.length > 300 ? `${f.message.slice(0, 297)}…` : f.message, name: f.testimonial?.displayName || 'An Udaan student' }));
 }
 
 // ---- Personal data requests ----

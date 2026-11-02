@@ -6,7 +6,7 @@ export type ApiError = { status: number; code: string; message: string; details?
 
 export type Readiness = { status: "ready" | "unavailable"; database: "connected" | "unavailable"; mail: "smtp" | "log-only" };
 
-export type Role = "student" | "admin";
+export type Role = "student" | "admin" | "counsellor";
 export type User = {
   id: string;
   name: string;
@@ -38,6 +38,10 @@ export type Profile = {
     entranceExams: Array<{ name: string; score: string; year: number | null }>;
     percentage: number | null;
   };
+  // What the student would like to study and where (free text; drives college suggestions).
+  preferences?: { course: string; location: string };
+  // Percentages by stage, used for eligibility checks.
+  marks?: { class10: { percentage: number | null; board: string; year: number | null }; class12: { percentage: number | null; board: string; year: number | null; stream: string }; graduation: { percentage: number | null; degree: string; year: number | null } };
   completion: number;
   updatedAt: string | null;
 };

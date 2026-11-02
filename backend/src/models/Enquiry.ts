@@ -1,12 +1,16 @@
 import mongoose, { type InferSchemaType } from 'mongoose';
 
 // Pipeline statuses in order, then side statuses.
-export const PIPELINE = ['NEW', 'CONTACTED', 'COUNSELLING_SCHEDULED', 'DOCUMENTS_PENDING', 'APPLICATION_IN_PROGRESS', 'SUBMITTED', 'OFFER_RECEIVED', 'ADMITTED'] as const;
-export const SIDE_STATUSES = ['ON_HOLD', 'REJECTED', 'WITHDRAWN', 'CLOSED'] as const;
+export const PIPELINE = ['NEW', 'CONTACT_PENDING', 'CONTACTED', 'INTERESTED', 'ELIGIBILITY_CHECK', 'COUNSELLING_SCHEDULED', 'COUNSELLING_COMPLETED', 'DOCUMENTS_PENDING', 'APPLICATION_IN_PROGRESS', 'SUBMITTED', 'OFFER_RECEIVED', 'ADMITTED'] as const;
+export const SIDE_STATUSES = ['ON_HOLD', 'NOT_INTERESTED', 'REJECTED', 'WITHDRAWN', 'CLOSED'] as const;
 export const ENQUIRY_STATUSES = [...PIPELINE, ...SIDE_STATUSES] as const;
 export type EnquiryStatus = (typeof ENQUIRY_STATUSES)[number];
 // Closed-off statuses (an enquiry in one of these is not "open").
-export const FINISHED_STATUSES: EnquiryStatus[] = ['ADMITTED', 'REJECTED', 'WITHDRAWN', 'CLOSED'];
+export const FINISHED_STATUSES: EnquiryStatus[] = ['ADMITTED', 'NOT_INTERESTED', 'REJECTED', 'WITHDRAWN', 'CLOSED'];
+// Where an enquiry came from (sent by the page that opened the enquiry form).
+export const LEAD_SOURCES = ['college_search', 'live_search', 'featured_college', 'top_colleges', 'college_page', 'compare', 'shortlist', 'recommended', 'home', 'campaign', 'direct'] as const;
+export const CALLBACK_TIMES = ['any', 'morning', 'afternoon', 'evening'] as const;
+export const CALLBACK_KINDS = ['callback', 'counselling'] as const;
 export const INSTITUTION_TYPES = ['government', 'private', 'deemed', 'autonomous', 'other'] as const;
 export const DOCUMENT_STATUSES = ['requested', 'received', 'waived'] as const;
 
@@ -60,6 +64,12 @@ const enquirySchema = new mongoose.Schema(
       percentage: { type: Number, default: null },
       passingYear: { type: Number, default: null },
       entranceExams: { type: [{ _id: false, name: String, score: String, year: Number }], default: [] },
+      // Class 10, Class 12 and graduation percentages from the profile at submission (null when not given).
+      marks: {
+        class10: { type: Number, default: null },
+        class12: { type: Number, default: null },
+        graduation: { type: Number, default: null },
+      },
     },
     preferences: {
       courses: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }], validate: (v: unknown[]) => v.length >= 1 && v.length <= 3 },
@@ -84,14 +94,40 @@ const enquirySchema = new mongoose.Schema(
     studentMessage: { type: String, trim: true, maxlength: 1000, default: '' },
     lastActivityAt: { type: Date, default: () => new Date() },
     idempotencyKey: { type: String, required: true, maxlength: 64 },
+    // Lead source tracking.
+    source: { type: String, enum: LEAD_SOURCES, default: 'direct' },
+    campaign: { type: String, trim: true, maxlength: 60, default: '' },
+    // When the student prefers to be called.
+    callbackTime: { type: String, enum: CALLBACK_TIMES, default: 'any' },
+    // The student's latest request for a call or counselling session (cleared when the team acts on it).
+    callbackRequest: {
+      type: new mongoose.Schema(
+        {
+          kind: { type: String, enum: CALLBACK_KINDS, required: true },
+          preferredDate: { type: Date, default: null },
+          slot: { type: String, enum: CALLBACK_TIMES, default: 'any' },
+          mode: { type: String, enum: ['phone', 'video', 'office'], default: 'phone' },
+          note: { type: String, trim: true, maxlength: 500, default: '' },
+          requestedAt: { type: Date, required: true },
+          handledAt: { type: Date, default: null },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
+    // When the team last tried to reach the student (calls, emails, messages).
+    lastContactAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
+enquirySchema.index({ source: 1, createdAt: -1 }, { name: 'enquiry_by_source' });
+enquirySchema.index({ 'callbackRequest.handledAt': 1, 'callbackRequest.requestedAt': 1 }, { name: 'enquiry_callback_requests', partialFilterExpression: { 'callbackRequest.requestedAt': { $type: 'date' } } });
 enquirySchema.index({ reference: 1 }, { unique: true, name: 'enquiry_reference_unique' });
 enquirySchema.index({ student: 1, idempotencyKey: 1 }, { unique: true, name: 'enquiry_idempotency' });
 enquirySchema.index({ student: 1, createdAt: -1 }, { name: 'enquiry_by_student' });
 enquirySchema.index({ status: 1, createdAt: -1 }, { name: 'enquiry_by_status' });
 enquirySchema.index({ assignedTo: 1, status: 1 }, { name: 'enquiry_by_counsellor' });
+enquirySchema.index({ assignedTo: 1, followUpAt: 1 }, { name: 'enquiry_counsellor_follow_ups', partialFilterExpression: { followUpAt: { $type: 'date' } } });
 enquirySchema.index({ followUpAt: 1 }, { name: 'enquiry_follow_up', partialFilterExpression: { followUpAt: { $type: 'date' } } });
 enquirySchema.index({ 'preferences.courses': 1 }, { name: 'enquiry_by_course' });
 enquirySchema.index({ 'preferences.colleges': 1 }, { name: 'enquiry_by_college' });
@@ -100,7 +136,7 @@ enquirySchema.index({ 'studentSnapshot.state': 1, 'studentSnapshot.city': 1 }, {
 export type Enquiry = InferSchemaType<typeof enquirySchema>;
 export const EnquiryModel = mongoose.model('Enquiry', enquirySchema, 'enquiries');
 
-export const EVENT_TYPES = ['created', 'status_change', 'note', 'contact_attempt', 'assignment', 'follow_up', 'document', 'application', 'appointment', 'message'] as const;
+export const EVENT_TYPES = ['created', 'status_change', 'note', 'contact_attempt', 'assignment', 'follow_up', 'document', 'application', 'appointment', 'message', 'callback_request', 'recommendation'] as const;
 
 // The enquiry's history and conversation: append-only. Students only ever see `visibility: 'student'` events.
 const enquiryEventSchema = new mongoose.Schema(

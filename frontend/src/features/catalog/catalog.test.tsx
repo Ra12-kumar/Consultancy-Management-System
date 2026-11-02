@@ -121,7 +121,7 @@ describe("fee breakdown", () => {
     expect(screen.getByRole("columnheader", { name: /Optional/ })).toBeInTheDocument();
     const officialRow = screen.getByRole("row", { name: /Official college fees \(whole course\)/ });
     expect(within(officialRow).getByText("₹4,00,000")).toBeInTheDocument();
-    expect(within(screen.getByRole("row", { name: /EduPath service charge/ })).getByText("₹10,000")).toBeInTheDocument();
+    expect(within(screen.getByRole("row", { name: /Udaan service charge/ })).getByText("₹10,000")).toBeInTheDocument();
     expect(within(screen.getByRole("row", { name: /Estimated total/ })).getByText("₹4,10,000")).toBeInTheDocument();
   });
 });

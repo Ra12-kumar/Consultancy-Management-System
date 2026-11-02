@@ -8,6 +8,9 @@ export const E2E = {
   mongo: process.env.E2E_MONGODB_URI ?? "mongodb://127.0.0.1:27017/education_consultancy_e2e",
 };
 
+// Shared with e2e/db.ts, which reads the emailed verification code from the (encrypted) outbox.
+export const E2E_SESSION_SECRET = "e2e-session-secret-that-is-long-enough-0123456789";
+
 const backendEnv = {
   NODE_ENV: "test",
   LOG_LEVEL: "warn",
@@ -15,7 +18,7 @@ const backendEnv = {
   MONGODB_URI: E2E.mongo,
   FRONTEND_URL: E2E.web,
   CORS_ORIGINS: E2E.web,
-  SESSION_SECRET: "e2e-session-secret-that-is-long-enough-0123456789",
+  SESSION_SECRET: E2E_SESSION_SECRET,
   SMTP_HOST: "",
   SMTP_USER: "",
   SMTP_PASS: "",
@@ -28,6 +31,7 @@ const backendEnv = {
   RAZORPAY_KEY_ID: "",
   RAZORPAY_KEY_SECRET: "",
   RAZORPAY_WEBHOOK_SECRET: "",
+  COLLEGEDB_API_KEY: "",
 };
 
 export default defineConfig({

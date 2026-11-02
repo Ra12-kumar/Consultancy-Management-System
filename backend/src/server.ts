@@ -1,9 +1,11 @@
 import type { Server } from 'node:http';
 import { env } from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
+import { connectRedis, disconnectRedis } from './config/redis.js';
 import { mailStatus, verifyMailTransport } from './config/mail.js';
 import { createApp } from './app.js';
 import { startAppointmentReminders, stopAppointmentReminders } from './services/appointment.service.js';
+import { kickImports, recoverInterruptedImports } from './services/directory/importJob.service.js';
 import { startEmailWorker, stopEmailWorker } from './services/emailWorker.js';
 import { loadTemplateOverrides } from './services/settings.service.js';
 import { logger } from './utils/logger.js';
@@ -21,7 +23,8 @@ function shutdown(reason: string, exitCode = 0) {
     stopEmailWorker();
     stopAppointmentReminders();
     if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
-    await disconnectDatabase().catch(() => {});
+    await disconnectRedis();
+    await disconnectDatabase().catch((err: Error) => logger.warn({ err: { name: err.name, message: err.message } }, 'MongoDB did not close cleanly during shutdown'));
     process.exit(exitCode);
   })();
   return stopping;
@@ -46,14 +49,19 @@ async function start() {
     logger.fatal({ err: { name: e.name, message: e.message } }, 'Could not connect to MongoDB');
     process.exit(1);
   }
+  // Optional shared cache and rate-limit store; the API also runs without it.
+  await connectRedis();
   server = createApp().listen(env.BACKEND_PORT, () => {
-    logger.info({ port: env.BACKEND_PORT, env: env.NODE_ENV, mail: mailStatus() }, 'Education Consultancy API listening');
+    logger.info({ port: env.BACKEND_PORT, env: env.NODE_ENV, mail: mailStatus(), collegeDbSearch: env.collegeDbConfigured ? 'enabled' : 'disabled (COLLEGEDB_API_KEY not set)' }, 'Education Consultancy API listening');
   });
   // Email: check the SMTP login (nothing is sent), then start sending queued emails with retries.
   void verifyMailTransport();
   await loadTemplateOverrides();
   startEmailWorker();
   startAppointmentReminders();
+  // College directory imports: release jobs a restart interrupted, then run anything queued.
+  await recoverInterruptedImports();
+  kickImports();
   server.on('error', (err: NodeJS.ErrnoException) => {
     logger.fatal({ code: err.code, port: env.BACKEND_PORT }, err.code === 'EADDRINUSE' ? 'Port already in use' : 'HTTP server error');
     process.exit(1);

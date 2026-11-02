@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/Button";
 import { SelectField, TextAreaField, TextField } from "@/components/ui/Field";
 import { Alert, Badge, Card, EmptyState } from "@/components/ui/Feedback";
 import { LoadState, PageTitle, Pager, fmtDate } from "@/features/admin/shared";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { ADMIN_LABELS, APPLICATION_LABELS, APPOINTMENT_LABELS, MODE_LABELS, StatusBadge, isoToIstInput, istInputToIso, reasonRequired } from "@/features/enquiry/shared";
+import { ADMIN_LABELS, APPLICATION_LABELS, APPOINTMENT_LABELS, CALLBACK_TIME_LABELS, LEAD_SOURCES, MODE_LABELS, SOURCE_LABELS, StatusBadge, isoToIstInput, istInputToIso, reasonRequired } from "@/features/enquiry/shared";
+import PhoneActions from "./PhoneActions";
 import { RequestPaymentPanel } from "@/features/admin/stage7/AdminStage7";
 import { useApiData } from "@/hooks/useApiData";
 import { formatINR } from "@/lib/format";
@@ -23,10 +24,25 @@ const QUALIFICATIONS: Record<string, string> = { class_10: "Class 10", class_12:
 
 // ---- List ----
 
+const QUICK: Array<[string, string]> = [
+  ["", "All"],
+  ["new", "New enquiries"],
+  ["today", "Today’s calls"],
+  ["overdue", "Overdue follow-ups"],
+  ["callback", "Callback requests"],
+  ["admitted", "Confirmed admissions"],
+];
+
 export function AdminEnquiryList() {
-  const [f, setF] = useState({ q: "", status: "", open: "yes", assigned: "", followUpDue: "", sort: "newest", page: 1 });
+  const { user } = useAuth();
+  const canExport = Boolean(user?.permissions.includes("reports.export"));
+  // Starting filters can come from the link (e.g. the dashboard's "Today’s follow-ups").
+  const params = useSearchParams();
+  const [f, setF] = useState(() => ({ q: "", status: params.get("status") ?? "", open: "yes", assigned: "", followUpDue: "", quick: params.get("quick") ?? "", source: params.get("source") ?? "", sort: "newest", page: 1 }));
   const qs = new URLSearchParams(Object.entries(f).filter(([k, v]) => v !== "" && !(k === "page" && v === 1)).map(([k, v]) => [k, String(v)]));
-  if (f.status) qs.delete("open");
+  if (f.status || f.quick) qs.delete("open");
+  const exportQs = new URLSearchParams(qs);
+  exportQs.delete("page");
   const list = useApiData(async (signal) => {
     const { data, meta } = await api<AdminEnquiryRow[]>("GET", `/admin/enquiries?${qs}`, { signal });
     return { items: data, meta: meta as PageMeta };
@@ -34,7 +50,30 @@ export function AdminEnquiryList() {
   const set = (patch: Partial<typeof f>) => setF({ ...f, ...patch, page: patch.page ?? 1 });
   return (
     <div>
-      <PageTitle title="Enquiries" subtitle="Admission enquiries from students. Open one to assign it, contact the student and move it forward." />
+      <PageTitle
+        title="Enquiries"
+        subtitle="Admission enquiries from students. Open one to assign it, contact the student and move it forward."
+        action={
+          canExport ? (
+            <a href={`/api/admin/enquiries/export?${exportQs}`} download className="inline-flex min-h-11 items-center rounded-xl border border-line px-4 text-sm font-semibold hover:bg-surface-2">
+              Export CSV
+            </a>
+          ) : undefined
+        }
+      />
+      <div role="group" aria-label="Quick filters" className="mb-3 flex flex-wrap gap-2">
+        {QUICK.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={f.quick === value}
+            onClick={() => set({ quick: value, status: "" })}
+            className={`min-h-10 rounded-full px-4 text-sm font-medium ring-1 ${f.quick === value ? "bg-primary text-primary-fg ring-primary" : "bg-surface ring-line hover:bg-surface-2"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <div className="mb-4 flex flex-wrap gap-2">
         <input type="search" aria-label="Search enquiries" placeholder="Reference, name, email or mobile" className={`${control} min-w-56 flex-1`} value={f.q} onChange={(e) => set({ q: e.target.value })} />
         <select aria-label="Status" className={control} value={f.status} onChange={(e) => set({ status: e.target.value })}>
@@ -49,6 +88,14 @@ export function AdminEnquiryList() {
           <option value="">Anyone</option>
           <option value="me">Assigned to me</option>
           <option value="unassigned">Unassigned</option>
+        </select>
+        <select aria-label="Lead source" className={control} value={f.source} onChange={(e) => set({ source: e.target.value })}>
+          <option value="">All sources</option>
+          {LEAD_SOURCES.map((s) => (
+            <option key={s} value={s}>
+              {SOURCE_LABELS[s]}
+            </option>
+          ))}
         </select>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={f.open === "yes"} onChange={(e) => set({ open: e.target.checked ? "yes" : "" })} /> Open only
@@ -70,15 +117,17 @@ export function AdminEnquiryList() {
       ) : (
         <>
           <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
-            <table className="w-full min-w-[48rem] text-sm">
+            <table className="w-full min-w-[64rem] text-sm">
               <caption className="sr-only">Enquiries</caption>
               <thead>
                 <tr className="text-left text-xs text-muted">
                   <th className="p-3">Reference</th>
                   <th>Student</th>
-                  <th>Course</th>
+                  <th>Phone</th>
+                  <th>College / course</th>
                   <th>Status</th>
                   <th>Counsellor</th>
+                  <th>Last contact</th>
                   <th>Received</th>
                 </tr>
               </thead>
@@ -94,16 +143,30 @@ export function AdminEnquiryList() {
                           <Badge tone="warning">Follow-up due</Badge>
                         </span>
                       )}
+                      {e.callbackRequested && (
+                        <span className="ml-2">
+                          <Badge tone="gold">Callback requested</Badge>
+                        </span>
+                      )}
+                      <span className="block text-xs text-muted">{SOURCE_LABELS[e.source] ?? e.source}</span>
                     </td>
                     <td>
                       {e.studentName}
                       <span className="block text-xs text-muted">{e.place || e.studentEmail}</span>
                     </td>
-                    <td>{e.courses.join(", ")}</td>
+                    <td>
+                      <PhoneActions mobile={e.studentMobile} />
+                      {e.callbackTime !== "any" && <span className="block text-xs text-muted">Prefers {CALLBACK_TIME_LABELS[e.callbackTime].toLowerCase()}</span>}
+                    </td>
+                    <td>
+                      {e.colleges.length > 0 && <span className="block font-medium">{e.colleges.join(", ")}</span>}
+                      <span className={e.colleges.length ? "text-xs text-muted" : ""}>{e.courses.join(", ")}</span>
+                    </td>
                     <td>
                       <StatusBadge status={e.status} admin />
                     </td>
                     <td>{e.assignedTo ?? <span className="text-muted">Unassigned</span>}</td>
+                    <td className="text-xs text-muted">{e.lastContactAt ? fmtDate(e.lastContactAt) : "Not yet"}</td>
                     <td className="text-xs text-muted">{fmtDate(e.createdAt)}</td>
                   </tr>
                 ))}
@@ -519,7 +582,7 @@ function AppointmentsPanel({ e, act }: { e: AdminEnquiry; act: Act }) {
 
 const adminAppointmentLabel = (s: AdminAppointment["status"]) => (s === "scheduled" ? "Awaiting student" : APPOINTMENT_LABELS[s]);
 
-const EVENT_LABELS: Record<string, string> = { created: "Enquiry received", status_change: "Status", note: "Internal note", contact_attempt: "Contact attempt", assignment: "Assignment", follow_up: "Follow-up", document: "Documents", application: "Application", appointment: "Appointment", message: "Message" };
+const EVENT_LABELS: Record<string, string> = { created: "Enquiry received", status_change: "Status", note: "Internal note", contact_attempt: "Contact attempt", assignment: "Assignment", follow_up: "Follow-up", document: "Documents", application: "Application", appointment: "Appointment", message: "Message", callback_request: "Callback request" };
 
 export function AdminEnquiryView({ e, reload }: { e: AdminEnquiry; reload: () => void }) {
   const [flash, setFlash] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -545,7 +608,18 @@ export function AdminEnquiryView({ e, reload }: { e: AdminEnquiry; reload: () =>
           ← All enquiries
         </Link>
       </p>
-      <PageTitle title={`${e.reference} · ${s.name}`} subtitle={`Received ${fmtDate(e.createdAt)} · last activity ${fmtDate(e.lastActivityAt)}`} action={<StatusBadge status={e.status} admin />} />
+      <PageTitle
+        title={`${e.reference} · ${s.name}`}
+        subtitle={`Received ${fmtDate(e.createdAt)} from ${SOURCE_LABELS[e.source] ?? e.source}${e.campaign ? ` (${e.campaign})` : ""} · last contact ${e.lastContactAt ? fmtDate(e.lastContactAt) : "not yet"} · last activity ${fmtDate(e.lastActivityAt)}`}
+        action={<StatusBadge status={e.status} admin />}
+      />
+      {e.callbackRequest && !e.callbackRequest.handledAt && (
+        <Alert tone="warning" title={e.callbackRequest.kind === "callback" ? "The student asked for a phone call" : `The student asked for a counselling session (${MODE_LABELS[e.callbackRequest.mode]})`}>
+          {e.callbackRequest.preferredDate ? `Preferred: ${new Date(e.callbackRequest.preferredDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}, ` : "As soon as possible, "}
+          {CALLBACK_TIME_LABELS[e.callbackRequest.slot].toLowerCase()}. {e.callbackRequest.note}
+          <span className="mt-1 block text-xs">Requested {fmtDate(e.callbackRequest.requestedAt)}. Record a contact attempt or book a session below to mark it handled.</span>
+        </Alert>
+      )}
       {flash && (
         <div aria-live="polite">
           <Alert tone={flash.tone}>{flash.text}</Alert>
@@ -559,7 +633,10 @@ export function AdminEnquiryView({ e, reload }: { e: AdminEnquiry; reload: () =>
                 <dt className="text-muted">Contact</dt>
                 <dd>
                   {s.email}
-                  {s.mobile && <span className="block">{s.mobile}</span>}
+                  <span className="mt-1 block">
+                    <PhoneActions mobile={s.mobile} />
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">Best time to call: {CALLBACK_TIME_LABELS[e.callbackTime]}</span>
                 </dd>
               </div>
               <div>

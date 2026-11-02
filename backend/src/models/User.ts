@@ -1,6 +1,7 @@
 import mongoose, { type InferSchemaType } from 'mongoose';
 
-export const ROLES = ['student', 'admin'] as const;
+// Counsellors work only on the enquiries assigned to them (no admin permissions).
+export const ROLES = ['student', 'admin', 'counsellor'] as const;
 export type Role = (typeof ROLES)[number];
 
 // Fine-grained admin permissions (least privilege). Students have none.

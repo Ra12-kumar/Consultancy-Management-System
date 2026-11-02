@@ -18,6 +18,8 @@ studentRouter.get('/me', requireRole('student'), c.getMe);
 studentRouter.patch('/me', requireRole('student'), validate({ body: updateMeBody }), c.updateMe);
 studentRouter.get('/me/profile', requireRole('student'), c.getMyProfile);
 studentRouter.put('/me/profile', requireRole('student'), validate({ body: profileBody }), c.saveMyProfile);
+// Suggested colleges and upcoming admission deadlines for shortlisted colleges.
+studentRouter.get('/me/recommendations', requireRole('student'), c.myRecommendations);
 studentRouter.use(studentCatalogRouter);
 studentRouter.use(studentUpdatesRouter);
 studentRouter.use(studentSupportRouter);

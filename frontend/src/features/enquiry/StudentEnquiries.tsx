@@ -12,7 +12,8 @@ import { formatINR } from "@/lib/format";
 import { api, apiGet, apiPost, apiUpload } from "@/services/api";
 import type { PageMeta } from "@/types/api";
 import type { EnquiryStatus, EnquirySummary, StudentAppointment, StudentApplication, StudentEnquiry, StudentEvent } from "@/types/enquiry";
-import { APPLICATION_LABELS, APPOINTMENT_LABELS, FINISHED, MODE_LABELS, StatusBadge, StatusStepper } from "./shared";
+import CallbackRequest from "./CallbackRequest";
+import { APPLICATION_LABELS, APPOINTMENT_LABELS, FINISHED, MODE_LABELS, StatusBadge, StatusStepper, EligibilityBadge } from "./shared";
 
 const errMsg = (e: unknown) => (e as { message?: string }).message ?? "Something went wrong";
 
@@ -162,6 +163,25 @@ function Timeline({ events }: { events: StudentEvent[] }) {
             {ev.toStatus && <StatusBadge status={ev.toStatus} />}
           </p>
           {ev.body && <p className="mt-1 whitespace-pre-line">{ev.body}</p>}
+          {ev.recommendations && ev.recommendations.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-semibold">Courses your counsellor suggests</p>
+              <ul className="mt-1 space-y-2">
+                {ev.recommendations.map((r) => (
+                  <li key={r.offeringId} className="rounded-lg bg-surface-2 p-2">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Link href={`/colleges/${r.collegeSlug}`} className="font-semibold hover:underline">
+                        {r.courseName} at {r.collegeName}
+                      </Link>
+                      <EligibilityBadge value={r.eligibility} />
+                    </span>
+                    <span className="block text-xs text-muted">{r.reasons.join(" · ")}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-muted">Eligibility is a guide from your marks and the college&apos;s criteria; it is not a guarantee of admission.</p>
+            </div>
+          )}
         </li>
       ))}
     </ol>
@@ -339,6 +359,15 @@ export function EnquiryView({ enquiry: e, reload }: { enquiry: StudentEnquiry; r
                   </li>
                 ))}
               </ul>
+            </Card>
+          )}
+          {open && (
+            <Card>
+              <h2 className="font-semibold">Talk to your counsellor</h2>
+              {e.counsellor && <p className="mt-1 text-sm text-muted">Your counsellor: {e.counsellor}</p>}
+              <div className="mt-3">
+                <CallbackRequest reference={e.reference} current={e.callbackRequest} onDone={() => reload()} />
+              </div>
             </Card>
           )}
           {open && (

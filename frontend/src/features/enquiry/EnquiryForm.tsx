@@ -11,9 +11,10 @@ import { SampleBadge } from "@/features/catalog/CatalogUi";
 import { useApiData } from "@/hooks/useApiData";
 import { COLLEGE_TYPES, formatINR, rupeesToPaise } from "@/lib/format";
 import { apiGet, apiPost } from "@/services/api";
+import { CALLBACK_TIME_LABELS, LEAD_SOURCES } from "./shared";
 import type { ApiError, Profile } from "@/types/api";
 import type { CollegeCard, CollegeDetail, Course, Location } from "@/types/catalog";
-import type { StudentEnquiry } from "@/types/enquiry";
+import type { StudentEnquiry, CallbackTime, LeadSource } from "@/types/enquiry";
 
 export const STEPS = ["Your details", "Course & colleges", "Preferences", "Review"];
 const QUALIFICATIONS: Record<string, string> = { class_10: "Class 10", class_12: "Class 12", diploma: "Diploma", undergraduate: "Undergraduate degree", postgraduate: "Postgraduate degree", other: "Other" };
@@ -32,6 +33,10 @@ type Draft = {
   intake: string;
   entranceExamNotes: string;
   counsellingRequest: string;
+  callbackTime: CallbackTime;
+  // Where the student came from (set from the link that opened the form).
+  source: LeadSource;
+  campaign: string;
 };
 
 // Client-side checks for each step (the server validates everything again).
@@ -63,7 +68,18 @@ export function enquiryPayload(d: Draft, idempotencyKey: string) {
     intake: d.intake.trim(),
     entranceExamNotes: d.entranceExamNotes.trim(),
     counsellingRequest: d.counsellingRequest.trim(),
+    callbackTime: d.callbackTime,
+    source: d.source,
+    campaign: d.campaign,
   };
+}
+
+// The lead source and campaign named in the link (anything unknown counts as a direct visit).
+export function leadFrom(params: URLSearchParams): { source: LeadSource; campaign: string } {
+  const campaign = (params.get("campaign") ?? params.get("utm_campaign") ?? "").replace(/[^A-Za-z0-9 _.-]/g, "").slice(0, 60);
+  const named = params.get("source") as LeadSource | null;
+  const source = named && LEAD_SOURCES.includes(named) ? named : campaign ? "campaign" : "direct";
+  return { source, campaign };
 }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
@@ -145,6 +161,9 @@ function Form({ profile, courses, locations, initial }: { profile: Profile; cour
     intake: "",
     entranceExamNotes: "",
     counsellingRequest: "",
+    callbackTime: "any",
+    source: "direct",
+    campaign: "",
     ...initial,
   });
   const [key] = useState(newKey);
@@ -333,6 +352,13 @@ function Form({ profile, courses, locations, initial }: { profile: Profile; cour
               <Toggle label="I am interested in scholarships" checked={d.scholarship} onChange={(scholarship) => set({ scholarship })} />
             </div>
             <TextField label="Entrance exams (taken or planned)" placeholder="e.g. JEE Main 2026 – 92 percentile" value={d.entranceExamNotes} onChange={(e) => set({ entranceExamNotes: e.target.value })} maxLength={500} />
+            <SelectField label="Best time to call you" value={d.callbackTime} onChange={(e) => set({ callbackTime: e.target.value as CallbackTime })}>
+              {(Object.keys(CALLBACK_TIME_LABELS) as CallbackTime[]).map((t) => (
+                <option key={t} value={t}>
+                  {CALLBACK_TIME_LABELS[t]}
+                </option>
+              ))}
+            </SelectField>
             <TextAreaField label="Anything else for your counsellor?" placeholder="Questions, best time to call, special requirements…" value={d.counsellingRequest} onChange={(e) => set({ counsellingRequest: e.target.value })} maxLength={2000} />
           </section>
         )}
@@ -422,7 +448,7 @@ export default function EnquiryForm() {
     async (signal) => {
       if (!isStudent) return null;
       const [profile, courses, locations] = await Promise.all([apiGet<Profile>("/students/me/profile", { signal }), apiGet<Course[]>("/courses", { signal }), apiGet<Location[]>("/locations", { signal })]);
-      const initial: Partial<Draft> = {};
+      const initial: Partial<Draft> = { ...leadFrom(params) };
       const course = courses.find((c) => c.slug === params.get("course"));
       if (course) initial.courses = [course.id];
       const slug = params.get("college");
@@ -430,6 +456,9 @@ export default function EnquiryForm() {
         const c = await apiGet<CollegeDetail>(`/colleges/${slug}`, { signal }).catch(() => null);
         if (c) initial.colleges = [{ id: c.id, name: c.name, isSample: c.isSample }];
       }
+      // A college found through the live search but not in our directory: named in the note to the counsellor.
+      const named = (params.get("collegeName") ?? "").replace(/[^\p{L}\p{N} .,&()'-]/gu, "").trim().slice(0, 200);
+      if (named && !initial.colleges) initial.counsellingRequest = `I am interested in ${named}.`;
       return { profile, courses, locations, initial };
     },
     [isStudent],

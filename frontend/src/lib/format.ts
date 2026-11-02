@@ -25,6 +25,8 @@ export const paiseToRupees = (minor: number | null | undefined) => (minor == nul
 export const fmtDay = (d: string | null | undefined) => (d ? new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(new Date(d)) : "—");
 
 export const COLLEGE_TYPES: Record<string, string> = { government: "Government", private: "Private", deemed: "Deemed university", autonomous: "Autonomous", other: "Other" };
+export const OWNERSHIP: Record<string, string> = { government: "Government", government_aided: "Government-aided", private: "Private", other: "Other" };
+export const CATEGORIES: Record<string, string> = { university: "University", college: "College", standalone: "Standalone institution" };
 export const COURSE_LEVELS: Record<string, string> = { diploma: "Diploma", ug: "Undergraduate", pg: "Postgraduate", pg_diploma: "PG diploma", doctorate: "Doctorate" };
 export const FREQUENCIES: Record<string, string> = { one_time: "One time", per_year: "Per year", per_semester: "Per semester", total_course: "Whole course" };
 

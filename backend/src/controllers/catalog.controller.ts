@@ -1,5 +1,13 @@
 import type { Request, Response } from 'express';
+import * as media from '../services/collegeMedia.service.js';
+import * as offeringSearch from '../services/offeringSearch.service.js';
+import * as explorer from '../services/collegeExplorer.service.js';
 import * as catalog from '../services/catalog.service.js';
+import * as images from '../services/collegeImages.service.js';
+import * as collegeDb from '../services/collegeDb.service.js';
+import * as directoryAdmin from '../services/directory/directoryAdmin.service.js';
+import * as imports from '../services/directory/importJob.service.js';
+import { IMPORTERS } from '../services/directory/importers.js';
 import * as search from '../services/collegeSearch.service.js';
 import * as fees from '../services/fee.service.js';
 import * as shortlist from '../services/shortlist.service.js';
@@ -56,6 +64,47 @@ export async function adminColleges(req: Request, res: Response) {
   const { items, meta } = await catalog.adminColleges(req.valid.query as Parameters<typeof catalog.adminColleges>[0]);
   sendSuccess(res, items, { meta });
 }
+// ---- College photos and featured order ----
+const imageId = (req: Request) => (req.valid.params as { imageId: string }).imageId;
+// College logo and brochure; course picture and brochure (admin uploads), and the public brochure file.
+export const uploadMedia = (slot: media.MediaSlot) => async (req: Request, res: Response) => {
+  sendSuccess(res, await media.setMedia(req, slot, id(req), req.file), { status: 201 });
+};
+export const removeMedia = (slot: media.MediaSlot) => async (req: Request, res: Response) => {
+  sendSuccess(res, await media.removeMedia(req, slot, id(req)));
+};
+export async function brochure(req: Request, res: Response) {
+  await media.streamBrochure(res, (req.valid.params as { fileId: string }).fileId);
+}
+export async function deleteCollege(req: Request, res: Response) {
+  sendSuccess(res, await media.deleteCollege(req, id(req)));
+}
+export async function browseOfferings(req: Request, res: Response) {
+  const { items, meta } = await offeringSearch.browseOfferings(req.valid.query as offeringSearch.OfferingQuery);
+  sendSuccess(res, items, { meta });
+}
+export async function collegeImage(req: Request, res: Response) {
+  await images.streamCollegeImage(res, (req.valid.params as { fileId: string }).fileId);
+}
+export async function uploadCollegeImage(req: Request, res: Response) {
+  sendSuccess(res, await images.uploadCollegeImage(req, id(req), req.file, (req.valid.body as { alt: string }).alt), { status: 201 });
+}
+export async function replaceCollegeImage(req: Request, res: Response) {
+  sendSuccess(res, await images.replaceCollegeImage(req, id(req), imageId(req), req.file));
+}
+export async function updateCollegeImages(req: Request, res: Response) {
+  sendSuccess(res, await images.updateCollegeImages(req, id(req), req.valid.body as { order?: string[]; primary?: string; alts?: Record<string, string> }));
+}
+export async function deleteCollegeImage(req: Request, res: Response) {
+  sendSuccess(res, await images.deleteCollegeImage(req, id(req), imageId(req)));
+}
+export async function featuredOrder(_req: Request, res: Response) {
+  sendSuccess(res, await images.featuredColleges());
+}
+export async function setFeaturedOrder(req: Request, res: Response) {
+  sendSuccess(res, await images.setFeaturedOrder(req, (req.valid.body as { ids: string[] }).ids));
+}
+
 export async function adminCollege(req: Request, res: Response) {
   sendSuccess(res, await catalog.adminCollege(id(req)));
 }
@@ -116,4 +165,62 @@ export async function saveComparison(req: Request, res: Response) {
 }
 export async function deleteComparison(req: Request, res: Response) {
   sendSuccess(res, await shortlist.deleteComparison(req, id(req)));
+}
+
+// ---- Directory ----
+export async function directoryFilters(_req: Request, res: Response) {
+  const [filters, coverage] = await Promise.all([search.directoryFilters(), search.directoryCoverage()]);
+  sendSuccess(res, { ...filters, coverage, externalSearch: collegeDb.collegeDbStatus() });
+}
+export async function districts(req: Request, res: Response) {
+  sendSuccess(res, await search.districtsOf((req.valid.query as { state: string }).state));
+}
+
+// ---- Admin: directory data (catalog.manage) ----
+type Paged = { page: number; limit: number };
+export async function createImport(req: Request, res: Response) {
+  sendSuccess(res, await imports.createImportJob(req, req.valid.body as { importer: string; sourceDataDate: Date | null; fullSnapshot: boolean }), { status: 202 });
+}
+export async function listImports(req: Request, res: Response) {
+  const { items, meta } = await imports.listImportJobs(req.valid.query as Paged);
+  sendSuccess(res, items, { meta });
+}
+export async function getImport(req: Request, res: Response) {
+  sendSuccess(res, await imports.importJob(id(req)));
+}
+export async function retryImport(req: Request, res: Response) {
+  sendSuccess(res, await imports.retryImportJob(id(req), req), { status: 202 });
+}
+export function importers(_req: Request, res: Response) {
+  sendSuccess(res, IMPORTERS.map((i) => ({ id: i.id, label: i.label, sourceName: i.sourceName, sourceUrl: i.sourceUrl, licence: i.licence, howToGet: i.howToGet, formats: i.formats, requiredColumns: i.required })));
+}
+export async function reviews(req: Request, res: Response) {
+  const { items, meta } = await directoryAdmin.listReviews(req.valid.query as Paged & { kind?: string; status: 'open' | 'resolved' });
+  sendSuccess(res, items, { meta });
+}
+export async function resolveReview(req: Request, res: Response) {
+  sendSuccess(res, await directoryAdmin.resolveReview(id(req), body(req), req));
+}
+export async function staleColleges(req: Request, res: Response) {
+  const { items, meta } = await directoryAdmin.staleRecords(req.valid.query as Paged & { reason?: 'not_in_source' | 'verification_due' });
+  sendSuccess(res, items, { meta });
+}
+export async function coverage(_req: Request, res: Response) {
+  const [overall, byState] = await Promise.all([search.directoryCoverage(), directoryAdmin.coverageByState()]);
+  sendSuccess(res, { overall, byState });
+}
+
+// ---- External college search (CollegeDB; server-side key) ----
+// Real-time college finder: name, place and branch over the Wikidata list.
+export async function exploreColleges(req: Request, res: Response) {
+  sendSuccess(res, await explorer.exploreColleges(req.valid.query as explorer.ExplorerQuery));
+}
+export function explorerBranches(_req: Request, res: Response) {
+  sendSuccess(res, explorer.BRANCHES);
+}
+export async function externalSearch(req: Request, res: Response) {
+  sendSuccess(res, await collegeDb.searchCollegeDb((req.valid.query as { q: string }).q));
+}
+export async function externalCollege(req: Request, res: Response) {
+  sendSuccess(res, await collegeDb.lookupCollegeDb(id(req)));
 }

@@ -69,7 +69,7 @@ Emails (verification, password reset, admin invitations, notices) go out through
    SMTP_USER=<your SMTP login>
    SMTP_PASS=<your SMTP key>
    EMAIL_FROM=<your verified sender>
-   EMAIL_FROM_NAME=EduPath Consultancy
+   EMAIL_FROM_NAME=Udaan
    ```
 4. Restart the backend. The log says `SMTP login accepted`, or explains why not. Admin → Email notifications shows the same.
 
@@ -81,7 +81,21 @@ Until all of these are set, emails are recorded as **Not sent (email not set up)
 - The queue survives restarts. It is not BullMQ or Redis; see `docs/security.md`.
 - Links containing tokens are stored encrypted.
 
-## 7. First administrator
+## 7. Registration, verification and sign-in
+- **Students register** at `/register` (name, email, mobile, password, and optional qualification, preferred course and location). Public registration always creates a student.
+- **A 6-digit code is emailed** (valid 10 minutes, single use, 5 wrong guesses at most; a new code at most once a minute and 5 an hour). Only a keyed hash of the code is stored. The student enters it at `/verify-email`; a correct code verifies the email and signs them in.
+- **Only verified students can sign in.** Signing in with an unverified email (correct password) sends a fresh code and opens the code page.
+- **Forgotten password:** `/forgot-password` emails a single-use reset link (30 minutes) that signs out every device.
+- **After sign-in**, the server-side role decides the dashboard: admins go to `/admin`, students to `/student`. Admin pages and APIs refuse students (403) and visitors (401) on the server, whatever the browser shows.
+- Codes and links reach students only if SMTP is configured (section 6). Without it, emails are recorded as "not sent" and nobody can verify, so configure email before going live.
+
+## 7a. Counsellor and admin accounts
+- The sign-up page offers **Student** (default), **Counsellor** and **Admin**. Counsellor and Admin need a single-use invitation code.
+- An admin with the Administrators permission makes codes at Admin > Administrators > Invitation codes (shown once; can be limited to one email; 1-30 days; revocable).
+- For testing, someone with server access can run `npm run invite:create -- --role counsellor` (or `--role admin`, which gets every permission).
+- Every new account verifies its email with the emailed 6-digit code. Counsellors land on /counsellor, admins on /admin, students on /student.
+
+## 8. First administrator
 Public registration only ever creates students. Create the first administrator once, from a terminal on the server:
 ```bash
 npm run admin:bootstrap -- --email you@example.com --name "Your Name"

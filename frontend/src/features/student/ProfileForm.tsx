@@ -39,6 +39,18 @@ type Draft = {
   examName: string;
   examScore: string;
   examYear: string;
+  prefCourse: string;
+  prefLocation: string;
+  m10: string;
+  m10Board: string;
+  m10Year: string;
+  m12: string;
+  m12Board: string;
+  m12Year: string;
+  m12Stream: string;
+  mGrad: string;
+  mGradDegree: string;
+  mGradYear: string;
 };
 
 function draftFrom(user: User, p: Profile): Draft {
@@ -58,6 +70,18 @@ function draftFrom(user: User, p: Profile): Draft {
     examName: exam?.name ?? "",
     examScore: exam?.score ?? "",
     examYear: exam?.year ? String(exam.year) : "",
+    prefCourse: p.preferences?.course ?? "",
+    prefLocation: p.preferences?.location ?? "",
+    m10: p.marks?.class10.percentage != null ? String(p.marks.class10.percentage) : "",
+    m10Board: p.marks?.class10.board ?? "",
+    m10Year: p.marks?.class10.year ? String(p.marks.class10.year) : "",
+    m12: p.marks?.class12.percentage != null ? String(p.marks.class12.percentage) : "",
+    m12Board: p.marks?.class12.board ?? "",
+    m12Year: p.marks?.class12.year ? String(p.marks.class12.year) : "",
+    m12Stream: p.marks?.class12.stream ?? "",
+    mGrad: p.marks?.graduation.percentage != null ? String(p.marks.graduation.percentage) : "",
+    mGradDegree: p.marks?.graduation.degree ?? "",
+    mGradYear: p.marks?.graduation.year ? String(p.marks.graduation.year) : "",
   };
 }
 
@@ -98,6 +122,12 @@ function Editor({ user, profile, onSaved }: { user: User; profile: Profile; onSa
           score: d.scoreType && d.scoreValue ? { type: d.scoreType, value: Number(d.scoreValue), max: d.scoreType === "percentage" ? null : num(d.scoreMax) } : null,
           entranceExams: d.examName.trim() ? [{ name: d.examName.trim(), score: d.examScore.trim(), year: num(d.examYear) }] : [],
         },
+        preferences: { course: d.prefCourse.trim(), location: d.prefLocation.trim() },
+        marks: {
+          class10: { percentage: num(d.m10), board: d.m10Board.trim(), year: num(d.m10Year) },
+          class12: { percentage: num(d.m12), board: d.m12Board.trim(), year: num(d.m12Year), stream: d.m12Stream.trim() },
+          graduation: { percentage: num(d.mGrad), degree: d.mGradDegree.trim(), year: num(d.mGradYear) },
+        },
       });
       onSaved(p, u);
       setState({ busy: false, ok: "Your profile has been saved." });
@@ -105,7 +135,7 @@ function Editor({ user, profile, onSaved }: { user: User; profile: Profile; onSa
       const f = fieldErrors(err);
       setErrors(f);
       setState({ busy: false, error: Object.keys(f).length ? "Please check the highlighted fields." : (err as ApiError).message });
-      if (Object.keys(f).some((k) => k.startsWith("academic"))) setStep(1);
+      if (Object.keys(f).some((k) => k.startsWith("academic") || k.startsWith("marks"))) setStep(1);
       else if (Object.keys(f).length) setStep(0);
     }
   }
@@ -167,6 +197,20 @@ function Editor({ user, profile, onSaved }: { user: User; profile: Profile; onSa
             )}
             <TextField label="Entrance exam (optional)" placeholder="e.g. JEE Main, NEET, CUET" value={d.examName} onChange={set("examName")} error={errors["academic.entranceExams.0.name"]} />
             <TextField label="Exam score / rank (optional)" value={d.examScore} onChange={set("examScore")} />
+            <TextField label="Course you want to study (optional)" placeholder="e.g. B.Tech, MBA" value={d.prefCourse} onChange={set("prefCourse")} maxLength={120} hint="Used to suggest colleges" />
+            <TextField label="Preferred study location (optional)" placeholder="e.g. Bengaluru, Delhi NCR" value={d.prefLocation} onChange={set("prefLocation")} maxLength={120} />
+            <fieldset className="grid gap-4 rounded-xl border border-line p-4 sm:col-span-2 sm:grid-cols-3">
+              <legend className="px-1 text-sm font-semibold">Marks (percentage; optional, used to check course eligibility)</legend>
+              <TextField label="Class 10 %" type="number" inputMode="decimal" step="0.01" min={0} max={100} value={d.m10} onChange={set("m10")} error={errors["marks.class10.percentage"]} />
+              <TextField label="Class 10 board" value={d.m10Board} onChange={set("m10Board")} maxLength={120} />
+              <TextField label="Class 10 year" type="number" inputMode="numeric" value={d.m10Year} onChange={set("m10Year")} error={errors["marks.class10.year"]} />
+              <TextField label="Class 12 %" type="number" inputMode="decimal" step="0.01" min={0} max={100} value={d.m12} onChange={set("m12")} error={errors["marks.class12.percentage"]} />
+              <TextField label="Class 12 board" value={d.m12Board} onChange={set("m12Board")} maxLength={120} />
+              <TextField label="Class 12 stream" placeholder="e.g. PCM, Commerce" value={d.m12Stream} onChange={set("m12Stream")} maxLength={60} />
+              <TextField label="Graduation %" type="number" inputMode="decimal" step="0.01" min={0} max={100} value={d.mGrad} onChange={set("mGrad")} error={errors["marks.graduation.percentage"]} />
+              <TextField label="Graduation degree" placeholder="e.g. B.Com" value={d.mGradDegree} onChange={set("mGradDegree")} maxLength={120} />
+              <TextField label="Graduation year" type="number" inputMode="numeric" value={d.mGradYear} onChange={set("mGradYear")} error={errors["marks.graduation.year"]} />
+            </fieldset>
           </fieldset>
         )}
         {step === 2 && (

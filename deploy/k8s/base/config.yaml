@@ -1,0 +1,30 @@
+# Non-secret settings shared by every API pod. Secrets (SESSION_SECRET, MONGODB_URI, email keys, …) live in the
+# Secret "api-secrets" (see secret.example.yaml); they are never written in these files.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  NODE_ENV: production
+  BACKEND_PORT: "5100"
+  APP_NAME: Udaan
+  # Overridden per environment (overlays).
+  FRONTEND_URL: https://udaan.example.com
+  CORS_ORIGINS: https://udaan.example.com
+  # One proxy hop in front of the API: the ingress controller. Raise only if more trusted proxies are in front.
+  TRUST_PROXY: "1"
+  REDIS_URL: redis://redis:6379
+  REDIS_PREFIX: consultancy
+  CACHE_TTL_SECONDS: "300"
+  UPLOAD_DIR: /data/uploads
+  LOG_LEVEL: info
+  API_DOCS: "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+data:
+  # Server-side calls from Next.js go straight to the API service inside the cluster.
+  API_INTERNAL_URL: http://api:5100
+  NEXT_TELEMETRY_DISABLED: "1"

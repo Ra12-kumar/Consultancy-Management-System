@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import StudentDashboard from "@/features/student/StudentDashboard";
+import StudentHome from "@/features/student/StudentHome";
 
 export const metadata: Metadata = { title: "Student dashboard" };
 
 export default function StudentPage() {
-  return <StudentDashboard />;
+  return <StudentHome />;
 }

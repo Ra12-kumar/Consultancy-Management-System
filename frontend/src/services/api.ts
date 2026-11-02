@@ -31,8 +31,10 @@ export const apiPatch = async <T,>(path: string, body: unknown) => (await api<T>
 export const apiDelete = async <T,>(path: string) => (await api<T>("DELETE", path)).data;
 
 // Multipart upload of one file (field "file"); the browser sets the boundary header.
-export async function apiUpload<T>(method: "POST" | "PUT", path: string, file: Blob, filename: string): Promise<T> {
+export async function apiUpload<T>(method: "POST" | "PUT", path: string, file: Blob, filename: string, fields: Record<string, string> = {}): Promise<T> {
   const form = new FormData();
+  // Text fields first, so the server reads them before the file.
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
   form.append("file", file, filename);
   let res: Response;
   try {

@@ -1,6 +1,7 @@
 import type { Request } from 'express';
 import mongoose from 'mongoose';
-import { CollegeModel } from '../models/College.js';
+import { CollegeModel, IMPORTABLE_FIELDS, normalizeName } from '../models/College.js';
+import { invalidateDirectoryCache } from './directory/cache.js';
 import { CollegeCourseModel } from '../models/CollegeCourse.js';
 import { CollegeFeeModel } from '../models/CollegeFee.js';
 import { CourseModel } from '../models/Course.js';
@@ -10,12 +11,16 @@ import { SavedComparisonModel, ShortlistModel } from '../models/Shortlist.js';
 import { ApiError } from '../utils/ApiError.js';
 import type { CollegeInput, OfferingInput } from '../validators/catalog.validators.js';
 import { actorFrom, audit } from './audit.service.js';
+import { galleryView } from './collegeImages.service.js';
+import { brochureUrl, pictureUrl } from './collegeMedia.service.js';
 
 type Id = mongoose.Types.ObjectId | string;
 const oid = (id: Id) => new mongoose.Types.ObjectId(String(id));
 export const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 export const pageMeta = (page: number, limit: number, total: number) => ({ page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) });
 const isDuplicate = (err: unknown) => (err as { code?: number })?.code === 11000;
+const collegeDuplicate = (err: unknown) =>
+  (err as { keyPattern?: Record<string, unknown> }).keyPattern?.aisheCode ? new ApiError(409, 'AISHE_CODE_IN_USE', 'Another college already has this AISHE code') : new ApiError(409, 'SLUG_IN_USE', 'A college with this slug already exists');
 
 // ---- Serialisers (what the API returns) ----
 
@@ -35,10 +40,15 @@ export const toOffering = (o: Lean) => ({
   applicationDeadline: o.applicationDeadline ?? null,
   admissionProcess: o.admissionProcess,
   status: o.status,
+  description: o.description ?? '',
+  mode: o.mode ?? 'offline',
+  minQualification: o.minQualification ?? null,
+  imageUrl: pictureUrl(o.imageFile),
+  brochureUrl: brochureUrl(o.brochureFile),
 });
 export function toAdminCollege(c: Lean) {
   const { _id, __v: _v, locationIds, courseIds, location, ...rest } = c;
-  return { id: String(_id), ...rest, location: location ? String(location) : null, locationIds: ((locationIds as unknown[]) ?? []).map(String), courseIds: ((courseIds as unknown[]) ?? []).map(String) };
+  return { id: String(_id), ...rest, brochureUrl: brochureUrl(c.brochureFile), images: galleryView(c), primaryImage: c.primaryImage ? String(c.primaryImage) : null, location: location ? String(location) : null, locationIds: ((locationIds as unknown[]) ?? []).map(String), courseIds: ((courseIds as unknown[]) ?? []).map(String) };
 }
 
 // ---- Derived data ----
@@ -64,23 +74,25 @@ export async function locationAncestry(locationId: Id | null) {
 export async function refreshCollegeSummary(collegeId: Id) {
   const college = await CollegeModel.findById(collegeId).select('location').lean();
   if (!college) return;
+  // Colleges without a city record (e.g. imported from AISHE) keep the state/district locations set by the importer.
+  const hasCity = Boolean(college.location);
   const ancestry = await locationAncestry(college.location ?? null);
   const city = ancestry.find((l) => String(l._id) === String(college.location));
   const state = ancestry.find((l) => l.kind === 'state');
   const offerings = await CollegeCourseModel.find({ college: collegeId, status: 'active' }).select('course').lean();
-  const [totals] = await CollegeFeeModel.aggregate<{ min: number; max: number }>([
+  const [totals] = await CollegeFeeModel.aggregate<{ min: number; max: number; minAnnual: number | null; maxAnnual: number | null }>([
     { $match: { college: oid(collegeId), status: 'published', collegeCourse: { $in: offerings.map((o) => o._id) } } },
-    { $group: { _id: null, min: { $min: '$officialTotalMinor' }, max: { $max: '$officialTotalMinor' } } },
+    { $group: { _id: null, min: { $min: '$officialTotalMinor' }, max: { $max: '$officialTotalMinor' }, minAnnual: { $min: '$annualOfficialMinor' }, maxAnnual: { $max: '$annualOfficialMinor' } } },
   ]);
   await CollegeModel.updateOne(
     { _id: collegeId },
     {
       $set: {
-        locationIds: ancestry.map((l) => l._id),
-        city: (city?.name as string) ?? '',
-        state: (state?.name as string) ?? '',
+        ...(hasCity && { locationIds: ancestry.map((l) => l._id), city: (city?.name as string) ?? '', state: (state?.name as string) ?? '' }),
         courseIds: [...new Set(offerings.map((o) => String(o.course)))].map(oid),
-        feeSummary: { minTotalMinor: totals?.min ?? null, maxTotalMinor: totals?.max ?? null, currency: 'INR' },
+        feeSummary: { minTotalMinor: totals?.min ?? null, maxTotalMinor: totals?.max ?? null, minAnnualMinor: totals?.minAnnual ?? null, maxAnnualMinor: totals?.maxAnnual ?? null, currency: 'INR' },
+        // A college with published courses and fees is no longer only a basic directory listing.
+        ...(offerings.length && { listingLevel: 'detailed' }),
       },
     },
   );
@@ -94,8 +106,9 @@ export async function rebuildAllSummaries() {
 
 // ---- Public lists ----
 
+// Districts (hundreds, created by imports) are listed per state by GET /colleges/districts instead.
 export async function publicLocations() {
-  return ((await LocationModel.find({ isActive: true }).sort({ kind: 1, sortOrder: 1, name: 1 }).lean()) as Lean[]).map(toLocation);
+  return ((await LocationModel.find({ isActive: true, kind: { $ne: 'district' } }).sort({ kind: 1, sortOrder: 1, name: 1 }).lean()) as Lean[]).map(toLocation);
 }
 export async function publicCourses() {
   return ((await CourseModel.find({ isActive: true }).sort({ sortOrder: 1, name: 1 }).lean()) as Lean[]).map(toCourse);
@@ -104,7 +117,7 @@ export async function publicCourses() {
 // ---- Admin: locations ----
 
 export async function adminLocations() {
-  return ((await LocationModel.find().sort({ kind: 1, sortOrder: 1, name: 1 }).lean()) as Lean[]).map(toLocation);
+  return ((await LocationModel.find({ kind: { $ne: 'district' } }).sort({ kind: 1, sortOrder: 1, name: 1 }).lean()) as Lean[]).map(toLocation);
 }
 
 async function assertParents(parents: string[] | undefined, selfId?: string) {
@@ -216,7 +229,7 @@ export async function createCollege(input: CollegeInput, req: Request) {
     await audit(actorFrom(req), 'catalog.college_created', { type: 'college', id: String(c._id) }, req, { slug: input.slug });
     return adminCollege(String(c._id));
   } catch (err) {
-    if (isDuplicate(err)) throw new ApiError(409, 'SLUG_IN_USE', 'A college with this slug already exists');
+    if (isDuplicate(err)) throw collegeDuplicate(err);
     throw err;
   }
 }
@@ -225,15 +238,25 @@ export async function updateCollege(id: string, patch: Partial<CollegeInput>, re
   await assertCity(patch.location);
   const before = await CollegeModel.findById(id).lean();
   if (!before) throw ApiError.notFound('College not found');
-  if (before.status === 'published' && patch.location === null) throw new ApiError(422, 'VALIDATION_ERROR', 'A published college needs a city', [{ field: 'location', message: 'Choose a city' }]);
+  // Removing the city of a published college is refused; imported basic listings never had one.
+  if (before.status === 'published' && patch.location === null && before.location) throw new ApiError(422, 'VALIDATION_ERROR', 'A published college needs a city', [{ field: 'location', message: 'Choose a city' }]);
+  const changed = Object.keys(patch).filter((k) => JSON.stringify((before as Record<string, unknown>)[k] ?? null) !== JSON.stringify((patch as Record<string, unknown>)[k] ?? null));
+  const lock = changed.filter((k) => (IMPORTABLE_FIELDS as readonly string[]).includes(k));
+  const set: Record<string, unknown> = { ...patch };
+  if (patch.name) set.normalizedName = normalizeName(patch.name);
   try {
-    await CollegeModel.updateOne({ _id: id }, { $set: patch }, { runValidators: true });
+    await CollegeModel.updateOne({ _id: id }, { $set: set, ...(lock.length && { $addToSet: { lockedFields: { $each: lock } } }) }, { runValidators: true });
   } catch (err) {
-    if (isDuplicate(err)) throw new ApiError(409, 'SLUG_IN_USE', 'A college with this slug already exists');
+    if (isDuplicate(err)) throw collegeDuplicate(err);
     throw err;
   }
   if ('location' in patch) await refreshCollegeSummary(id);
-  await audit(actorFrom(req), 'catalog.college_updated', { type: 'college', id }, req, { fields: Object.keys(patch) });
+  invalidateDirectoryCache();
+  await audit(actorFrom(req), 'catalog.college_updated', { type: 'college', id }, req, {
+    fields: changed,
+    changes: Object.fromEntries(changed.map((k) => [k, { from: (before as Record<string, unknown>)[k] ?? null, to: (patch as Record<string, unknown>)[k] ?? null }])),
+    lockedFromImport: lock,
+  });
   return adminCollege(id);
 }
 
@@ -242,7 +265,8 @@ export async function setCollegeStatus(id: string, action: 'publish' | 'archive'
   const c = await CollegeModel.findById(id).lean();
   if (!c) throw ApiError.notFound('College not found');
   if (action === 'publish') {
-    const missing = [!c.location && 'location', !c.type && 'type', !c.lastVerifiedAt && 'lastVerifiedAt'].filter(Boolean) as string[];
+    // Basic directory listings (from an authorised source) need a state; colleges entered by hand need a city.
+    const missing = [!c.location && !(c.listingLevel === 'basic' && c.state) && 'location', !c.type && 'type', !c.lastVerifiedAt && !c.source?.lastSyncedAt && 'lastVerifiedAt'].filter(Boolean) as string[];
     if (missing.length) {
       throw new ApiError(422, 'NOT_READY', 'Add the city, college type and the date the details were last verified before publishing', missing.map((field) => ({ field, message: 'Required before publishing' })));
     }

@@ -14,6 +14,7 @@ import { logger } from '../utils/logger.js';
 
 export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png'] as const;
+export const PDF_TYPES = ['application/pdf'] as const;
 type Mime = (typeof PHOTO_TYPES)[number] | (typeof DOCUMENT_TYPES)[number];
 const EXT: Record<Mime, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' };
 
@@ -33,7 +34,7 @@ const cleanName = (name: string) => path.basename(name).replace(/[^\w.\- ()]/g, 
 
 export async function saveUpload(
   file: Express.Multer.File | undefined,
-  o: { owner: string; uploadedBy: string; kind: 'photo' | 'document'; allowed: readonly Mime[]; enquiry?: unknown; documentId?: unknown },
+  o: { owner: string; uploadedBy: string; kind: 'photo' | 'document' | 'college_image' | 'brochure'; allowed: readonly Mime[]; enquiry?: unknown; documentId?: unknown },
 ) {
   if (!file?.buffer?.length) throw new ApiError(422, 'VALIDATION_ERROR', 'Choose a file to upload', [{ field: 'file', message: 'Choose a file' }]);
   const mime = sniff(file.buffer);

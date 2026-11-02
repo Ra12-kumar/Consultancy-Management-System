@@ -20,6 +20,9 @@ Connection logic lives in `backend/src/config/database.ts`. Models live in `back
 | `npm run migrate:stage3` | `scripts/migrate-stage3.ts` | One-off: grants the new `admissions.confirm` permission to owner admins (those with `admins.manage`) and creates the indexes for `enquiries`, `enquiryEvents`, `admissionApplications` and `counsellingAppointments`. |
 | `npm run migrate:stage5` | `scripts/migrate-stage5.ts` | One-off: grants `feedback.manage` and `privacy.manage` to owner admins and creates the indexes for `storedFiles`, `feedback` and `dataRequests`. |
 | `npm run migrate:stage7` | `scripts/migrate-stage7.ts` | One-off: grants `content.manage` and `payments.manage` to owner admins and creates the indexes for site settings, email templates, pages, announcements and payments. |
+| `npm run migrate:directory` | `scripts/migrate-directory.ts` | One-off for the college directory: stores the derived annual, hostel and overall figures on every fee, sets the search name and listing level on existing colleges, refreshes their fee summaries, and creates the indexes for colleges, fees, `collegeImportJobs` and `directoryReviewItems`. Safe to run more than once. |
 | `npm run admin:bootstrap` | `scripts/bootstrap-admin.ts` | Creates the first administrator (see `docs/setup.md`). |
+
+College data imports (AISHE files uploaded by an admin) run inside the API, never delete records, and are described in `docs/college-directory.md`.
 
 Nothing in this project drops, resets or migrates a database automatically: every script above runs only when you call it.

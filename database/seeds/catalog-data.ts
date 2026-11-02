@@ -9,7 +9,7 @@ import { CourseModel } from '../../backend/src/models/Course.js';
 import { LocationModel } from '../../backend/src/models/Location.js';
 import { ScholarshipModel } from '../../backend/src/models/Scholarship.js';
 import { refreshCollegeSummary } from '../../backend/src/services/catalog.service.js';
-import { calculateFee, type FeeComponent } from '../../backend/src/services/feeCalculator.js';
+import { calculateFee, storedTotals, type FeeComponent } from '../../backend/src/services/feeCalculator.js';
 
 // [slug, name, kind, parent slugs]
 const LOCATIONS: Array<[string, string, 'region' | 'state' | 'city', string[]]> = [
@@ -155,7 +155,7 @@ export async function seedCatalog() {
         status: 'published',
         version: 1,
         durationMonths: offering.durationMonths,
-        officialTotalMinor: b.officialTotalMinor,
+        ...storedTotals(b),
         publishedAt: new Date(),
       });
       counts.fees += 1;
@@ -189,9 +189,9 @@ async function seedSampleScholarships(loc: Map<string, unknown>, courses: Map<st
       documentsRequired: ['Family income certificate', 'Class 12 marksheet'],
     },
     {
-      slug: 'sample-edupath-service-charge-waiver', name: 'Sample EduPath Service Charge Waiver', providerType: 'consultancy', providerName: 'EduPath Consultancy (sample)', college: null,
+      slug: 'sample-edupath-service-charge-waiver', name: 'Sample Udaan Service Charge Waiver', providerType: 'consultancy', providerName: 'Udaan (sample)', college: null,
       description: 'A fictional consultancy offer used to demonstrate the system: half of the consultancy service charge waived.',
-      benefit: { type: 'service_charge_percent', value: 50, maxMinor: null, description: '50% off the EduPath service charge (sample)' },
+      benefit: { type: 'service_charge_percent', value: 50, maxMinor: null, description: '50% off the Udaan service charge (sample)' },
       eligibility: { courses: [], minPercentage: 75, maxFamilyIncomeMinor: null, states: [], categories: [], genders: [], notes: '' },
       documentsRequired: [],
     },

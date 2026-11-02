@@ -66,6 +66,17 @@ export function calculateFee({ components, durationMonths, consultancyServiceCha
     discountMinor = Math.min(discountMinor, tuitionMinor);
   }
   const officialAfterDiscountMinor = officialTotalMinor - discountMinor;
+
+  // Annual figures for "per year" budgets. Only recurring components count (per year, or per semester x 2);
+  // one-time and whole-course items are never spread over years. Null when nothing recurring is published, so a
+  // college with only a whole-course fee is "not comparable" on an annual basis rather than looking cheap.
+  const annualOf = (group: 'official' | 'optional', key?: FeeKey) => {
+    const recurring = lines.filter((l) => l.group === group && (!key || l.key === key) && (l.frequency === 'per_year' || l.frequency === 'per_semester'));
+    return recurring.length ? recurring.reduce((t, l) => t + l.amountMinor * (l.frequency === 'per_semester' ? 2 : 1), 0) : null;
+  };
+  const annualOfficialMinor = annualOf('official');
+  const hostelAnnualMinor = annualOf('optional', 'hostel');
+
   return {
     currency: 'INR' as const,
     durationMonths,
@@ -79,7 +90,16 @@ export function calculateFee({ components, durationMonths, consultancyServiceCha
     // What the student pays for admission: official fees after discount plus the consultancy charge
     // (shown as its own line). Optional hostel/transport are not included.
     estimatedTotalMinor: officialAfterDiscountMinor + consultancyServiceChargeMinor,
+    // Recurring official fees per year (null = not published on an annual basis).
+    annualOfficialMinor,
+    // Hostel per year, if a recurring hostel fee is published.
+    hostelAnnualMinor,
+    // Everything over the whole course: official fees after discount, optional fees if opted, and the service charge.
+    overallEstimateMinor: officialAfterDiscountMinor + optionalTotalMinor + consultancyServiceChargeMinor,
   };
 }
 
 export type FeeBreakdown = ReturnType<typeof calculateFee>;
+
+// The totals stored on a fee document for search (always recomputed by the server from the components).
+export const storedTotals = (b: FeeBreakdown) => ({ officialTotalMinor: b.officialTotalMinor, annualOfficialMinor: b.annualOfficialMinor, hostelAnnualMinor: b.hostelAnnualMinor, overallEstimateMinor: b.overallEstimateMinor });

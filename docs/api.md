@@ -18,13 +18,15 @@ Base URL: `/api`. The browser calls this through the frontend (http://localhost:
 ## Auth (`/api/auth`)
 | Method | Path | Access | Notes |
 |---|---|---|---|
-| POST | `/register` | public | `{ name, email, mobile, password }`. Always creates a **student**; unknown fields (e.g. `role`) give 422. The same answer is returned for an existing email (no enumeration). |
-| POST | `/login` | public | `{ email, password }`. The error is always "Email or password is incorrect". Locks for 15 min after 10 failures. Rate limited. |
+| POST | `/register` | public | `{ name, email, mobile, password, qualification?, preferredCourse?, preferredLocation? }`. Always creates a **student**; unknown fields (e.g. `role`) give 422. Emails a 6-digit code. The same answer is returned for an existing email (no enumeration). |
+| POST | `/login` | public | `{ email, password }`. The error is always "Email or password is incorrect". A student with an unverified email gets 403 `EMAIL_NOT_VERIFIED` (only after a correct password) and a fresh code. Locks for 15 min after 10 failures. Rate limited. |
+| POST | `/verify-otp` | public | `{ email, code }` (6 digits). Verifies the email and signs the student in (`{ user, signedIn }`). Codes last 10 min, work once, stop after 5 wrong guesses; one answer (400 `INVALID_CODE`) for wrong, used, expired codes and unknown emails. Rate limited per IP and per email. |
 | POST | `/logout` | any | Ends this session |
 | POST | `/logout-all` | signed in | Ends every session of the user |
 | GET | `/me` | signed in | The signed-in user |
-| POST | `/verify-email` | public | `{ token }`, single use, 24 h |
-| POST | `/resend-verification` | public | `{ email }`, generic answer, rate limited |
+| POST | `/verify-email` | public | `{ token }`, single use, 24 h (links in emails sent before codes were introduced) |
+| GET | `/email-delivery` | public | `{ available }`: whether codes can be emailed at all (same answer for everyone). Register and resend answers also carry `emailDelivery`; when false, the message says no code was sent. |
+| POST | `/resend-verification` | public | `{ email }`, emails a new code; at most once a minute and 5 an hour; generic answer, rate limited |
 | POST | `/forgot-password` | public | `{ email }`, generic answer, rate limited |
 | POST | `/reset-password` | public | `{ token, password }`, single use, 30 min; signs out all devices |
 | POST | `/set-password` | public | `{ token, password }`, admin invitation link, 72 h |
@@ -55,13 +57,22 @@ Only active locations and courses, and **published** colleges and fees, are ever
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/locations` | Regions, states and cities with their `parents` |
+| GET | `/locations` | Regions, states and cities with their `parents` (districts are listed per state below) |
 | GET | `/courses` | The course catalogue |
-| GET | `/colleges?q=&course=&location=&type=&maxBudget=&percentage=&sort=&page=&limit=` | `q` matches college name, city, state or course name. `course` and `location` are slugs; a region or state finds every city under it. `maxBudget` (paise) compares published official course totals. `percentage` keeps colleges with an offering whose minimum is at or below it (or has none). `sort`: `featured`, `name`, `fee_low`, `fee_high`, `recently_verified`. `meta.hasSamples` is true while sample colleges are published. |
+| GET | `/colleges?q=&course=&location=&state=&district=&type=&ownership=&category=&approval=&scholarship=yes&hostel=yes&intake=&feeBasis=total|annual&minBudget=&maxBudget=&maxHostel=&maxOverall=&includeUnverified=yes&percentage=&sort=&page=&limit=` | `q` matches name, alias, AISHE code, city, district, state or course. `location`, `state`, `district` are location slugs. Budgets are paise on the chosen `feeBasis` (`total` = whole course, `annual` = per year); only verified published fees match, unless `includeUnverified=yes` also adds colleges with no comparable fee. A missing fee is never treated as zero. `minBudget` > `maxBudget` is 422. `sort`: `featured`, `name`, `fee_low`, `fee_high`, `recently_verified`, `recently_updated`. Each card has `listingLevel` (`basic`/`detailed`), `source`, `stale` and `fee` `{ basis, amountMinor, status: verified|not_verified|not_comparable }`. `meta` has `hasSamples`, `feeBasis` and `coverage`. |
+| GET | `/colleges/filters` | States (with slugs and counts), ownership and category counts, approval bodies, and `coverage` (`total`, `statesCovered`/`statesTotal`, `withVerifiedFees`, `sources`, `lastImportAt`, `partial`). |
+| GET | `/colleges/search?q=` | Third-party name search via CollegeDB (2–80 characters, at most 5 results, cached; 30 per IP per 10 minutes). Results: `{ id, name, city, state, local }`. `local` links a matching published college in our directory. 503 `COLLEGEDB_NOT_CONFIGURED` / `COLLEGEDB_QUOTA_EXHAUSTED` / `COLLEGEDB_UNAVAILABLE`, 502 on provider errors. |
+| GET | `/colleges/external/:id` | One CollegeDB record (UUID): `aliases`, `type`, `typeLabel`, `providerUpdatedAt`. |
+| GET | `/colleges/districts?state=` | Districts of a state with published institutions (404 for an unknown state). |
 | GET | `/colleges/compare?colleges=a,b[,c,d]&course=` | 2–4 slugs. Unpublished ones are left out and listed in `missing`; fewer than two left gives 404. |
 | GET | `/colleges/:slug` | Profile, active offerings, and the current published fee per academic year and intake, each with a breakdown: `lines`, `officialTotalMinor`, `discountMinor`, `consultancyServiceChargeMinor` (separate), `estimatedTotalMinor`, `optionalTotalMinor` (hostel/transport, not in the estimate). Drafts and archived colleges answer 404. |
 
-The "has scholarships" filter arrives with scholarships in Stage 4.
+Public fees also return `annualOfficialMinor` and `hostelAnnualMinor` (null when not comparable per year). See `docs/college-directory.md` for data sources and coverage.
+
+## Recommendations (`/api/students`, students only)
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/me/recommendations` | `{ basis, items, deadlines }`: published colleges matching the latest enquiry and profile preferences (course, location, budget), else featured colleges; `basis` says which preferences matched. `deadlines`: shortlisted colleges whose admission deadline is in the next 60 days. |
 
 ## Student shortlist and comparisons (`/api/students`, students only)
 | Method | Path | Notes |
@@ -90,6 +101,31 @@ The "has scholarships" filter arrives with scholarships in Stage 4.
 | POST | `/fees/:id/archive` | `pricing.manage` |
 | POST | `/fees/preview` | `pricing.manage`. Runs the calculator without saving. |
 
+## College photos and featured order (`/api/admin`, `catalog.manage`)
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/colleges/:id/images` | multipart `file` (JPEG/PNG/WebP by content, 5 MB) and `alt`; at most 12 per college; the first becomes primary |
+| PATCH | `/colleges/:id/images` | `{ order?: [imageId…], primary?: imageId, alts?: { imageId: text } }`; the order must list every photo once |
+| PUT | `/colleges/:id/images/:imageId` | multipart `file`: replaces the picture, keeping position, caption and primary flag |
+| DELETE | `/colleges/:id/images/:imageId` | removes the photo and its file |
+| GET / PUT | `/colleges/featured` | the featured colleges in order / `{ ids: [...] }` replaces the list (archived colleges refused) |
+
+Public: `GET /api/colleges/images/:fileId` serves only files stored as college photos (`nosniff`, sandboxed, cached). Cards carry `imageUrl` (primary photo, else the cover URL), `featuredRank`, `academicSession`, `admissionDeadline`, `applicationUrl`; the detail adds `gallery`, `eligibility`, `entranceExams`, `facilities`, `highlights`. `sort=featured` follows the admins' order.
+
+## College data administration (`/api/admin`, `catalog.manage`)
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/college-importers` | Available authorised sources, how to obtain each file, licence |
+| POST | `/college-imports` | multipart: `file` (.xlsx/.csv, ≤60 MB), `importer`, `sourceDataDate?`, `fullSnapshot=yes|no`. Columns are checked before queueing (415 `UNSUPPORTED_FILE`, 422 `MISSING_COLUMNS`). 202 with the queued job. |
+| GET | `/college-imports?page=` · `/college-imports/:id` | Status, progress, counts, the first 200 row errors |
+| POST | `/college-imports/:id/retry` | Failed or interrupted jobs continue from their checkpoint (409 `NOT_RETRYABLE` otherwise) |
+| GET | `/directory/reviews?kind=&status=open|resolved` | Possible duplicates and field conflicts from imports |
+| POST | `/directory/reviews/:id/resolve` | `{ action, note? }`: `not_duplicate`, `archive_new`, `archive_existing` (duplicates); `keep_current`, `accept_incoming` (conflicts). Nothing is deleted. |
+| GET | `/directory/stale?reason=not_in_source|verification_due` | Records missing from the latest complete import, or verified over a year ago |
+| GET | `/directory/coverage` | Overall coverage and counts by state |
+
+Admin edits to imported fields lock them against later imports (`lockedFields`); differing source values become review items. A duplicate AISHE code on a college answers 409 `AISHE_CODE_IN_USE`.
+
 Every catalogue and pricing change is written to the audit log (`catalog.*`, `pricing.*`). The dashboard summary (`/dashboard/summary`) also returns catalogue counts.
 
 ## Enquiries, applications and appointments: students
@@ -105,6 +141,14 @@ These are signed-in students' own records only; anything else answers 404. Write
 | GET | `/appointments` | My counselling sessions |
 | POST | `/appointments/:id/confirm` · `/reschedule` · `/cancel` | `{ note }` (required to reschedule or cancel; emails the counsellor) |
 | GET | `/students/me/updates?page=` | Notifications feed (student-visible events) |
+
+## Enquiry CRM additions
+- Statuses also include `CONTACT_PENDING`, `INTERESTED` (pipeline) and `NOT_INTERESTED` (finished; needs a reason). `ADMITTED` (shown as "Admission confirmed") is still reached only by confirming an application with evidence.
+- `POST /api/enquiries` also accepts `source` (lead source: `college_search`, `live_search`, `featured_college`, `top_colleges`, `college_page`, `compare`, `shortlist`, `recommended`, `home`, `campaign`, `direct`), `campaign` and `callbackTime` (`any`, `morning`, `afternoon`, `evening`).
+- `POST /api/enquiries/:reference/callback-request` (student, verified): `{ kind: callback|counselling, preferredDate?, slot, mode, note }`. Recorded on the timeline, emailed to the counsellor (or the team) and shown until a contact attempt or a booked session settles it.
+- `GET /api/admin/enquiries` also takes `quick=new|today|overdue|callback|admitted` (today/overdue use IST days) and `source`; rows include `studentMobile`, `colleges`, `source`, `callbackTime`, `callbackRequested`, `lastContactAt`.
+- `GET /api/admin/enquiries/export` (needs `enquiries.manage` and `reports.export`): the same filters as CSV (max 5,000 rows, formulas neutralised, audited as `enquiry.exported`).
+- `GET /api/admin/dashboard/summary` adds `enquiries.pending|interested|followingUp|followUpsToday|followUpsOverdue|callbackRequests`, `conversionRate` and `charts` (`enquiriesByDay` for 30 days, `byStatus`, `topColleges`, `bySource`).
 
 ## Enquiries, applications and appointments: admin (`/api/admin`, `enquiries.manage`)
 | Method | Path | Notes |
@@ -200,8 +244,33 @@ Full, always up-to-date details are in the generated documentation at **`/api/do
 | 401 | `UNAUTHORIZED`, `INVALID_CREDENTIALS` | Not signed in; wrong email or password |
 | 403 | `FORBIDDEN`, `CSRF_REJECTED`, `EMAIL_NOT_VERIFIED`, `OWN_PERMISSIONS`, `PERMISSION_NOT_HELD` | Not allowed |
 | 404 | `NOT_FOUND` | Unknown route, or a record you may not see |
-| 409 | `CONFLICT`, `EMAIL_IN_USE`, `ADMIN_EXISTS`, `SLUG_IN_USE`, `IN_USE`, `FEE_LOCKED`, `LIMIT_REACHED` | Duplicates, records in use, published fees, list limits |
+| 409 | `CONFLICT`, `EMAIL_IN_USE`, `ADMIN_EXISTS`, `SLUG_IN_USE`, `AISHE_CODE_IN_USE`, `NOT_RETRYABLE`, `IN_USE`, `FEE_LOCKED`, `LIMIT_REACHED` | Duplicates, records in use, published fees, list limits |
 | 422 | `VALIDATION_ERROR`, `WRONG_PASSWORD`, `NOT_READY` | Invalid input; publishing without the required details (see `details`) |
 | 429 | `RATE_LIMITED`, `ACCOUNT_LOCKED` | Too many attempts |
 | 500 | `INTERNAL_ERROR` | Unexpected error (details only in server logs) |
+| 502 / 503 | `COLLEGEDB_UNAVAILABLE`, `COLLEGEDB_QUOTA_EXHAUSTED`, `COLLEGEDB_NOT_CONFIGURED` | The third-party college search is down, out of quota or not configured |
 | 503 | `SERVICE_UNAVAILABLE` | Database temporarily unreachable |
+
+## Staff sign-up, invitation codes and the counsellor area
+- `POST /api/auth/register` also takes `accountType` (`student` default, `counsellor`, `admin`) and `inviteCode`. Staff accounts need a valid single-use code (403 `INVITE_REQUIRED` / `INVITE_INVALID`); the role and permissions come from the code, never the request (`role` in the body is still 422). Staff verify their email with the emailed code, then sign in with their password.
+- Admin (`admins.manage`): `GET /api/admin/invite-codes`, `POST /api/admin/invite-codes` `{ role, permissions?, email?, note?, days? }` (returns the plain `code` once; admin codes never carry permissions the creator lacks), `DELETE /api/admin/invite-codes/:id` (revoke an unused code).
+- Counsellor (role `counsellor`): `GET /api/counsellor/summary` counts for the enquiries assigned to them only. Counsellors get 403 on every `/api/admin` route.
+- CLI (server access): `npm run invite:create -- --role counsellor|admin [--email x] [--days 1-30]` prints a code once.
+
+## College media, social links and deletion (admin, catalog.manage)
+- College fields: `social { instagram, facebook, youtube, linkedin, x }` (https only; the address must belong to that network), `admissionInfo`. Statuses keep their values; the UI shows **Active** = published, **Draft** = draft, **Inactive** = archived. Students only ever see published colleges and active courses.
+- `POST|DELETE /api/admin/colleges/:id/logo` (JPEG/PNG/WebP by content, 5 MB; sets `logoUrl`), `POST|DELETE /api/admin/colleges/:id/brochure` (PDF by content, 10 MB).
+- `DELETE /api/admin/colleges/:id`: only unpublished colleges that no enquiry, application, shortlist, comparison or scholarship refers to (409 `COLLEGE_ACTIVE` / `IN_USE`); removes its courses, fees and files.
+- Public: `GET /api/colleges/brochures/:fileId` serves only brochure files (PDF, nosniff, sandboxed). College detail adds `social`, `admissionInfo`, `brochureUrl`.
+
+## Courses at colleges
+- Offering fields: `description`, `mode` (`offline`|`online`|`hybrid`), `minQualification` (class_10, class_12, diploma, undergraduate, postgraduate, other), plus `imageUrl`/`brochureUrl`. Uploads: `POST|DELETE /api/admin/offerings/:id/image` and `/brochure`.
+- `GET /api/courses/offerings`: active courses of published colleges. Filters `q`, `level`, `course`, `state`, `city`, `maxFee` (rupees per year, or total when a course has no yearly fee), `qualification` (shows courses whose stated minimum you meet, and those with none stated), `mode`, `sort=name|fee|deadline`, `page`, `limit`.
+
+## Counsellors, eligibility, reports and social links
+- Counsellor area (`/api/counsellor`, role counsellor; only enquiries assigned to them, anything else 404): `GET /summary`, `GET /enquiries` (same filters as the admin list), `GET /enquiries/:id` (adds `academics` with Class 10/12/graduation marks and `eligibility` for the chosen colleges and courses), `PATCH /enquiries/:id` `{ followUpAt }`, `POST /enquiries/:id/status|notes|contact-attempts|messages`, `POST /enquiries/:id/recommendations` `{ offerings: [id], note }` (student-visible, with eligibility), `POST /enquiries/:id/eligibility` `{ offerings }`. Counsellors cannot reassign, confirm admissions or reach `/api/admin`.
+- Admin (`admins.manage`): `GET /api/admin/team/counsellors?from&to` (accounts with assigned/contacted/pending/converted/closed/overdue and conversion %), `POST` `{ name, email, mobile? }` (emails a set-password link), `PATCH /:id`, `POST /:id/deactivate|activate` (deactivation ends their sessions; enquiries stay for reassignment). Enquiries can be assigned to active counsellors and to admins with `enquiries.manage`. Admin (`enquiries.manage`) can also use `POST /api/admin/enquiries/:id/recommendations|eligibility`.
+- Eligibility: `eligible`, `potentially_eligible` (data missing, entrance exam needed, or within 5 points below the cut-off) or `not_eligible`, always with reasons; never a promise of admission. UG courses use Class 12 marks, diplomas Class 10, PG and above graduation.
+- New statuses `ELIGIBILITY_CHECK` and `COUNSELLING_COMPLETED` (pipeline, after INTERESTED and COUNSELLING_SCHEDULED). Profile: optional `marks { class10, class12, graduation }`; enquiries snapshot the percentages.
+- `GET /api/admin/reports/enquiries` (`reports.export`): totals plus by counsellor, college and course; filters `from`, `to`, `college`, `course`, `counsellor` (id or `unassigned`), `status`. The CSV export takes the same filters (`assigned` for the counsellor). The dashboard summary adds `totals`.
+- Site settings: `organisation.instagram`, `organisation.facebook` (https pages of that network), `crm.autoAssign` (new enquiries go to the active counsellor with the fewest open enquiries; not shown publicly). Counsellors get a daily follow-up email after 09:00 IST when they have follow-ups due or overdue.

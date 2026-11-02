@@ -4,7 +4,7 @@ import { EmailDeliveryModel } from '../src/models/EmailDelivery.js';
 import { EnquiryEventModel, EnquiryModel } from '../src/models/Enquiry.js';
 import { processEmailQueue } from '../src/services/emailWorker.js';
 import { rupees } from './catalogFixtures.js';
-import { enquiryBody, enquiryWorld, submitEnquiry } from './enquiryFixtures.js';
+import { enquiryBody, enquiryWorld, profile, submitEnquiry } from './enquiryFixtures.js';
 import { app, createLimitedAdmin, failSends, outbox, registerStudent, useTestDb } from './helpers.js';
 
 useTestDb();
@@ -162,5 +162,27 @@ describe('conversation, assignment and documents', () => {
     const { CollegeFeeModel } = await import('../src/models/CollegeFee.js');
     await CollegeFeeModel.updateMany({}, { $set: { officialTotalMinor: 1 } }).catch(() => undefined);
     expect((await w.student.c.get(`/api/enquiries/${reference}`)).body.data.feeEstimates[0].officialTotalMinor).toBe(rupees(400_000));
+  });
+});
+
+describe('many students at once', () => {
+  it('parallel enquiries from different students each get their own enquiry and a unique reference', async () => {
+    const w = await enquiryWorld();
+    const students = [w.student];
+    for (let i = 0; i < 7; i += 1) {
+      const s = await registerStudent({ name: `Parallel Student ${'ABCDEFG'[i]}` });
+      expect((await s.c.put('/api/students/me/profile', profile)).status).toBe(200);
+      students.push(s);
+    }
+    const results = await Promise.all(students.map((s) => s.c.post('/api/enquiries', enquiryBody(w))));
+    expect(results.map((r) => r.status)).toEqual(Array(8).fill(201));
+    const refs = results.map((r) => r.body.data.reference as string);
+    expect(new Set(refs).size).toBe(8);
+    expect(await EnquiryModel.countDocuments()).toBe(8);
+    // Each student sees only their own.
+    for (const [i, s] of students.entries()) {
+      const mine = await s.c.get('/api/enquiries');
+      expect(mine.body.data.map((e: { reference: string }) => e.reference)).toEqual([refs[i]]);
+    }
   });
 });

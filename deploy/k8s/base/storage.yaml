@@ -1,0 +1,13 @@
+# Private uploads (student photos and documents, college images, brochures). Every API pod reads and writes them,
+# so the volume must be ReadWriteMany (e.g. AWS EFS, Azure Files, GCP Filestore, or an NFS provisioner).
+# Set storageClassName to your cluster's RWX class in the overlay.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads
+  labels: { app.kubernetes.io/part-of: education-consultancy }
+spec:
+  accessModes: ["ReadWriteMany"]
+  resources:
+    requests:
+      storage: 20Gi

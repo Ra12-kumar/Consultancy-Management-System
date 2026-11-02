@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN, STUDENT_PASSWORD, markVerified } from "./db";
+import { ADMIN, STUDENT_PASSWORD, emailedCode } from "./db";
 
 // The spec's core journeys, in order: a visitor browses and compares, a student registers and enquires, an admin
 // works the enquiry, and the student sees the permitted update.
@@ -20,7 +20,9 @@ async function signIn(page: Page, email: string, password: string) {
 test("a visitor searches colleges, sees labelled sample data and a separate service charge", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Colleges" }).first().click();
-  await expect(page.getByRole("heading", { name: "Explore colleges" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Colleges across India" })).toBeVisible();
+  // The simple name search is first; the filtered directory is one click away.
+  await page.getByRole("link", { name: "Browse with filters" }).click();
   await expect(page.getByText("This directory currently includes sample data")).toBeVisible();
   await page.getByRole("search", { name: "Filter colleges" }).getByRole("combobox", { name: "Course", exact: true }).selectOption({ label: "B.Tech / B.E." });
   await expect(page).toHaveURL(/course=btech-be/);
@@ -29,7 +31,7 @@ test("a visitor searches colleges, sees labelled sample data and a separate serv
   await expect(page.getByText(/Consultancy service charge \(separate from college fees\)/).first()).toBeVisible();
 });
 
-test("a student registers, verifies, completes the enquiry form and gets a reference number", async ({ page }) => {
+test("a student registers, verifies with the emailed code, completes the enquiry form and gets a reference number", async ({ page }) => {
   await page.goto("/register");
   await page.getByLabel(/Full name/).fill(student.name);
   await page.getByLabel(/^Email/).fill(student.email);
@@ -37,12 +39,20 @@ test("a student registers, verifies, completes the enquiry form and gets a refer
   await page.getByLabel(/^Password/).fill(STUDENT_PASSWORD);
   await page.getByLabel(/Confirm password/).fill(STUDENT_PASSWORD);
   await page.getByRole("button", { name: "Create student account" }).click();
-  await expect(page.getByRole("status").getByText("Check your email", { exact: true })).toBeVisible();
-  // Emails are only logged in tests, so the verification click is done in the database.
-  await markVerified(student.email);
-
-  await signIn(page, student.email, STUDENT_PASSWORD);
-  await expect(page).toHaveURL(/\/student$/);
+  // Next: the 6-digit code from the email. Unverified students cannot sign in.
+  await page.waitForURL(/\/verify-email\?sent=1/);
+  // E2E runs without SMTP, so the page must say honestly that no code could be emailed (never a false "sent").
+  await expect(page.getByText(/email delivery is not set up/)).toBeVisible();
+  await expect(page.getByText(/emailed you a 6-digit code/)).toHaveCount(0);
+  const blocked = await page.request.post("/api/auth/login", { data: { email: student.email, password: STUDENT_PASSWORD }, headers: { Origin: new URL(page.url()).origin } });
+  expect(blocked.status()).toBe(403);
+  await page.getByLabel(/Verification code/).fill("000000");
+  await page.getByRole("button", { name: "Verify and continue" }).click();
+  await expect(page.getByText(/incorrect or has expired/)).toBeVisible();
+  await page.getByLabel(/Verification code/).fill(await emailedCode(student.email));
+  await page.getByRole("button", { name: "Verify and continue" }).click();
+  // A correct code verifies the email and signs the student in.
+  await page.waitForURL(/\/student$/);
   await page.goto("/enquire");
   await expect(page.getByRole("heading", { name: "Your details" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();

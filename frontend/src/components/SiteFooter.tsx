@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SocialLinks from "@/features/content/SocialLinks";
 
 const columns = [
   { title: "Explore", links: [["/colleges", "Colleges"], ["/courses", "Courses"], ["/scholarships", "Scholarships"], ["/admission-process", "Admission process"]] },
@@ -12,9 +13,10 @@ export default function SiteFooter() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div>
           <p className="text-lg font-bold text-white">
-            EduPath<span className="text-gold"> Consultancy</span>
+            Udaan
           </p>
           <p className="mt-2 text-sm text-white/70">Guidance for higher-education admissions across India: colleges, courses, fees and scholarships.</p>
+          <SocialLinks tone="dark" />
         </div>
         {columns.map((col) => (
           <nav key={col.title} aria-label={col.title}>

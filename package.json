@@ -27,10 +27,14 @@
     "migrate:stage3": "npm --workspace backend run migrate:stage3",
     "migrate:stage5": "npm --workspace backend run migrate:stage5",
     "migrate:stage7": "npm --workspace backend run migrate:stage7",
+    "migrate:directory": "npm --workspace backend run migrate:directory",
+    "migrate:indexes": "npm --workspace backend run migrate:indexes",
     "db:check": "npm --workspace backend run db:check",
     "admin:bootstrap": "npm --workspace backend run admin:bootstrap --",
+    "invite:create": "npm --workspace backend run invite:create --",
     "test:backend": "npm --workspace backend run test",
     "test:frontend": "npm --workspace education-consultancy-frontend run test",
+    "test:coverage": "npm --workspace backend run test:coverage && npm --workspace education-consultancy-frontend run test:coverage",
     "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {

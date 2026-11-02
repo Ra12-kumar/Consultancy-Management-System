@@ -176,8 +176,39 @@ function TemplateEditor({ t, onSaved }: { t: TemplateRow; onSaved: () => void })
   );
 }
 
+// New enquiries can go straight to the active counsellor with the fewest open enquiries.
+function AutoAssignCard({ enabled, onSaved }: { enabled: boolean; onSaved: () => void }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <Card>
+      <h2 className="font-semibold">Enquiry assignment</h2>
+      <label className="mt-3 flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={enabled}
+          onChange={async (e) => {
+            try {
+              await apiPut("/admin/settings/site", { crm: { autoAssign: e.target.checked } });
+              setMsg(e.target.checked ? "New enquiries are now assigned automatically." : "Automatic assignment is off.");
+              onSaved();
+            } catch (err) {
+              setMsg(errMsg(err));
+            }
+          }}
+        />
+        <span>
+          Assign each new enquiry automatically to the active counsellor with the fewest open enquiries
+          <span className="block text-xs text-muted">Admins can still reassign any enquiry.</span>
+        </span>
+      </label>
+      {msg && <p className="mt-2 text-sm" aria-live="polite">{msg}</p>}
+    </Card>
+  );
+}
+
 export function AdminSiteSettings() {
-  const settings = useApiData((signal) => apiGet<{ organisation: SiteInfo["organisation"] }>("/admin/settings/site", { signal }), []);
+  const settings = useApiData((signal) => apiGet<{ organisation: SiteInfo["organisation"]; crm?: { autoAssign: boolean } }>("/admin/settings/site", { signal }), []);
   const templates = useApiData((signal) => apiGet<TemplateRow[]>("/admin/email-templates", { signal }), []);
   const [org, setOrg] = useState<SiteInfo["organisation"] | null>(null);
   const [flash, setFlash] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -208,6 +239,8 @@ export function AdminSiteSettings() {
             {field("supportPhone", "Support phone")}
             {field("whatsapp", "WhatsApp number")}
             {field("officeHours", "Office hours")}
+            {field("instagram", "Instagram page (https://instagram.com/…)")}
+            {field("facebook", "Facebook page (https://facebook.com/…)")}
             <div className="sm:col-span-2">
               <TextAreaField label="Address" value={o.address} onChange={(e) => setOrg({ ...o, address: e.target.value })} maxLength={400} />
             </div>
@@ -222,6 +255,7 @@ export function AdminSiteSettings() {
           </form>
         )}
       </Card>
+      <AutoAssignCard enabled={Boolean(settings.data?.crm?.autoAssign)} onSaved={settings.reload} />
       <section className="space-y-3" aria-labelledby="tpl">
         <h2 id="tpl" className="font-semibold">
           Email templates
@@ -438,7 +472,7 @@ export function AdminPayments() {
   const [error, setError] = useState("");
   return (
     <div className="space-y-4">
-      <PageTitle title="Payments" subtitle="Online payments of the EduPath service charge (Razorpay). Official college fees are never collected here. Create a payment request from an enquiry." />
+      <PageTitle title="Payments" subtitle="Online payments of the Udaan service charge (Razorpay). Official college fees are never collected here. Create a payment request from an enquiry." />
       {status.data && !status.data.enabled && (
         <Alert tone="warning" title="Online payment is switched off">
           Add this project’s Razorpay keys (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and RAZORPAY_WEBHOOK_SECRET) to the settings file and restart the API. Until then students can see requests but cannot pay online.
@@ -506,7 +540,7 @@ export function RequestPaymentPanel({ enquiryId, suggestedMinor, onDone }: { enq
   return (
     <Card>
       <h2 className="font-semibold">Payment request</h2>
-      <p className="mt-1 text-xs text-muted">For EduPath’s own service charge only. Official college fees are paid to the college.</p>
+      <p className="mt-1 text-xs text-muted">For Udaan’s own service charge only. Official college fees are paid to the college.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <TextField label="Amount (₹)" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
         <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={200} />

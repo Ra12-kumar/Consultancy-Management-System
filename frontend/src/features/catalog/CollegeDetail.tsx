@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Alert, Badge, Card, Skeleton } from "@/components/ui/Feedback";
 import { useApiData } from "@/hooks/useApiData";
-import { COLLEGE_TYPES, COURSE_LEVELS, durationLabel, fmtDay } from "@/lib/format";
+import { CATEGORIES, COLLEGE_TYPES, COURSE_LEVELS, OWNERSHIP, durationLabel, fmtDay } from "@/lib/format";
+import { safeHref } from "@/lib/safeUrl";
 import { apiGet } from "@/services/api";
+import { recordRecent } from "./recent";
 import type { CollegeDetail as Detail, PublicOffering } from "@/types/catalog";
-import { CollegeLogo, CompareToggle, CompareTray, FeeBreakdown, SAMPLE_LABEL, SampleBadge, ShortlistButton, VerifiedLine } from "./CatalogUi";
+import { AdmissionDetails, PhotoGallery } from "./CollegeGalleryView";
+import { CollegeLinks, CourseExtras } from "./CollegeExtras";
+import { BASIC_LABEL, WebsiteLink, enquiryHref, ownImage, CollegeLogo, CompareToggle, CompareTray, FeeBreakdown, SAMPLE_LABEL, SampleBadge, ShortlistButton, VerifiedLine } from "./CatalogUi";
 
 const isUrl = (s: string) => /^https:\/\//i.test(s);
 
@@ -30,6 +34,7 @@ function Offering({ o, isSample, open }: { o: PublicOffering; isSample: boolean;
         </span>
       </summary>
       <div className="space-y-4 border-t border-line px-5 py-4 text-sm">
+        <CourseExtras o={o} />
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-muted">Eligibility</dt>
@@ -99,8 +104,55 @@ function Offering({ o, isSample, open }: { o: PublicOffering; isSample: boolean;
   );
 }
 
+// Identity details and where they came from (official source and sync dates).
+function InstitutionFacts({ college: c }: { college: Detail }) {
+  const facts: Array<[string, string]> = [];
+  if (c.aisheCode) facts.push(["AISHE code", c.aisheCode]);
+  if (c.subtype) facts.push(["Type", c.subtype]);
+  if (c.affiliatedUniversity) facts.push(["Affiliated to", c.affiliatedUniversity.name]);
+  if (c.yearEstablished) facts.push(["Established", String(c.yearEstablished)]);
+  if (c.district) facts.push(["District", c.district]);
+  if (c.areaType) facts.push(["Area", c.areaType === "rural" ? "Rural" : "Urban"]);
+  if (!facts.length && !c.source) return null;
+  return (
+    <Card>
+      <h2 className="font-semibold">Institution details</h2>
+      {facts.length > 0 && (
+        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          {facts.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-muted">{k}</dt>
+              <dd className="break-words">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {c.source && (
+        <p className="mt-3 border-t border-line pt-3 text-xs text-muted">
+          Source:{" "}
+          {c.source.url ? (
+            <a href={c.source.url} target="_blank" rel="noopener noreferrer" className="underline">
+              {c.source.name}
+            </a>
+          ) : (
+            c.source.name
+          )}
+          {c.source.lastSyncedAt && `. Details last updated from the source ${fmtDay(c.source.lastSyncedAt)}`}
+          {c.source.lastSeenAt && `; last seen in its data ${fmtDay(c.source.lastSeenAt)}`}.
+        </p>
+      )}
+    </Card>
+  );
+}
+
 export function CollegeProfile({ college: c }: { college: Detail }) {
   const [cover, setCover] = useState(true);
+  // The primary gallery photo, else the cover photo URL.
+  const coverSrc = ownImage(c.imageUrl) ?? safeHref(c.coverUrl, { httpsOnly: true });
+  const gallery = c.gallery ?? [];
+  const website = safeHref(c.website);
+  // Remembered in this browser only, for "Recently viewed" on the directory.
+  useEffect(() => recordRecent({ slug: c.slug, name: c.name, place: [c.city || c.district, c.state].filter(Boolean).join(", ") }), [c.slug, c.name, c.city, c.district, c.state]);
   return (
     <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
       <nav aria-label="Breadcrumb" className="text-sm text-muted">
@@ -116,10 +168,28 @@ export function CollegeProfile({ college: c }: { college: Detail }) {
           </Alert>
         </div>
       )}
+      {c.listingLevel === "basic" && !c.isSample && (
+        <div className="mt-4">
+          <Alert tone="info" title={BASIC_LABEL}>
+            This institution is listed from {c.source?.name ?? "an official source"}. Its identity details come from that source; courses, fees and admission information have not been verified by us yet. Please check with the institution before deciding, or{" "}
+            <Link href={enquiryHref(c.slug, null, "college_page")} className="font-semibold underline">
+              ask our counsellors
+            </Link>
+            .
+          </Alert>
+        </div>
+      )}
+      {c.stale && (
+        <div className="mt-4">
+          <Alert tone="warning" title="Some details may be out of date">
+            This record was not in the latest data from its source, or its details were last verified more than a year ago.
+          </Alert>
+        </div>
+      )}
       <header className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface">
-        {c.coverUrl && cover ? (
+        {coverSrc && cover && gallery.length === 0 ? (
           // eslint-disable-next-line @next/next/no-img-element -- admin-provided https URLs from any host
-          <img src={c.coverUrl} alt="" onError={() => setCover(false)} className="h-40 w-full object-cover sm:h-56" />
+          <img src={coverSrc} alt={`Campus of ${c.name}`} onError={() => setCover(false)} className="h-40 w-full object-cover sm:h-56" />
         ) : (
           <div aria-hidden="true" className="h-24 bg-gradient-to-r from-primary to-primary/70 sm:h-32" />
         )}
@@ -129,8 +199,10 @@ export function CollegeProfile({ college: c }: { college: Detail }) {
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{c.name}</h1>
-            <p className="mt-1 text-muted">{[c.address, c.city, c.state].filter(Boolean).join(", ")}</p>
+            <p className="mt-1 text-muted">{[c.address, c.city || c.district, c.state].filter(Boolean).join(", ")}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
+              {c.category && <Badge>{CATEGORIES[c.category] ?? c.category}</Badge>}
+              {c.ownership && <Badge>{OWNERSHIP[c.ownership] ?? c.ownership}</Badge>}
               <Badge>{COLLEGE_TYPES[c.type] ?? c.type}</Badge>
               {c.isSample && <SampleBadge />}
               {c.approvals.map((a) => (
@@ -146,12 +218,14 @@ export function CollegeProfile({ college: c }: { college: Detail }) {
           <div className="flex flex-wrap gap-2">
             <ShortlistButton collegeId={c.id} size="md" />
             <CompareToggle slug={c.slug} name={c.name} size="md" />
-            <ButtonLink href={`/enquire?college=${encodeURIComponent(c.slug)}${c.offerings[0]?.course ? `&course=${c.offerings[0].course.slug}` : ""}`} variant="gold">
-              Enquire
+            <ButtonLink href={enquiryHref(c.slug, c.offerings[0]?.course?.slug, "college_page")} variant="gold">
+              Enquire Now
             </ButtonLink>
+            <WebsiteLink url={c.website} name={c.name} size="md" />
           </div>
         </div>
       </header>
+      <PhotoGallery name={c.name} images={gallery} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_20rem]">
         <section aria-labelledby="courses-heading" className="min-w-0 space-y-3">
@@ -167,6 +241,9 @@ export function CollegeProfile({ college: c }: { college: Detail }) {
           )}
         </section>
         <aside className="space-y-4">
+          <AdmissionDetails c={c} />
+          <CollegeLinks c={c} />
+          <InstitutionFacts college={c} />
           {c.about && (
             <Card>
               <h2 className="font-semibold">About</h2>
@@ -208,13 +285,13 @@ export function CollegeProfile({ college: c }: { college: Detail }) {
               )}
             </Card>
           )}
-          {(c.website || c.contact.phone || c.contact.email) && (
+          {(website || c.contact.phone || c.contact.email) && (
             <Card>
               <h2 className="font-semibold">Contact</h2>
               <ul className="mt-2 space-y-1 text-sm break-words">
-                {c.website && (
+                {website && (
                   <li>
-                    <a href={c.website} target="_blank" rel="noopener noreferrer nofollow" className="underline">
+                    <a href={website} target="_blank" rel="noopener noreferrer nofollow" className="underline">
                       Official website
                     </a>
                   </li>

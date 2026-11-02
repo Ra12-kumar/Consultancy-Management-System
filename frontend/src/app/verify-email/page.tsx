@@ -11,7 +11,7 @@ export default function Page() {
   return (
     <AuthCard
       title="Verify your email"
-      subtitle="Confirming the address on your account."
+      subtitle="Enter the 6-digit code we emailed you to activate your account."
       footer={<Link href="/login" className="font-semibold text-accent-text hover:underline">Back to sign in</Link>}
     >
       <Suspense fallback={<Spinner />}>

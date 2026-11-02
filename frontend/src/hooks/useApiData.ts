@@ -20,7 +20,7 @@ export function useApiData<T>(loader: (signal: AbortSignal) => Promise<T>, deps:
         if (error?.name !== "AbortError" && !controller.signal.aborted) setState({ status: "error", data: undefined, error });
       });
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- callers pass the values the loader depends on in `deps`
   }, [...deps, attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);

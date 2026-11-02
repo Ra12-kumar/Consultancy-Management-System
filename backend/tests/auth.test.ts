@@ -1,26 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { AuthTokenModel } from '../src/models/AuthToken.js';
+import { EmailOtpModel } from '../src/models/EmailOtp.js';
 import { SessionModel } from '../src/models/Session.js';
 import { UserModel } from '../src/models/User.js';
-import { PASSWORD, client, outbox, registerStudent, tokenFromEmail, useTestDb } from './helpers.js';
+import { PASSWORD, client, codeFromEmail, outbox, registerStudent, tokenFromEmail, useTestDb } from './helpers.js';
 import { processEmailQueue } from '../src/services/emailWorker.js';
 
 useTestDb();
 
 const valid = (email = 'ravi@example.com') => ({ name: 'Ravi Kumar', email, mobile: '+91 98765 43210', password: PASSWORD });
 
+// Verifies ravi@example.com with the emailed code (which also signs that client in).
+const verified = async (c: ReturnType<typeof client>) => expect((await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code: await codeFromEmail('ravi@example.com') })).status).toBe(200);
+const otherCode = (code: string) => String((Number(code) + 1) % 1_000_000).padStart(6, '0');
+
 describe('registration', () => {
-  it('creates a student (never an admin), hashes the password and emails a verification link', async () => {
+  it('creates a student (never an admin), hashes the password, stores only a hash of the emailed code', async () => {
     const c = client();
-    const res = await c.post('/api/auth/register', valid('Ravi@Example.com'));
+    const res = await c.post('/api/auth/register', { ...valid('Ravi@Example.com'), qualification: 'class_12', preferredCourse: 'B.Tech', preferredLocation: 'Bengaluru' });
     expect(res.status).toBe(201);
     const user = await UserModel.findOne({ email: 'ravi@example.com' }).select('+passwordHash').lean();
     expect(user).toMatchObject({ role: 'student', mobile: '+919876543210', emailVerifiedAt: null });
     expect(user!.passwordHash).toMatch(/^\$argon2id\$/);
-    await processEmailQueue();
+    const code = await codeFromEmail('ravi@example.com');
     expect(outbox[0]).toMatchObject({ to: 'ravi@example.com', subject: expect.stringContaining('verify') });
-    expect(outbox[0]!.html).toContain('/verify-email?token=');
-    expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|argon2/);
+    expect(outbox[0]!.html).toContain(code);
+    const otp = await EmailOtpModel.findOne({ user: user!._id }).lean();
+    expect(otp!.codeHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(otp)).not.toContain(code);
+    expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|argon2|\d{6}/);
+    // The optional academic details start the profile.
+    await verified(c);
+    expect((await c.get('/api/students/me/profile')).body.data).toMatchObject({ academic: { highestQualification: 'class_12' }, preferences: { course: 'B.Tech', location: 'Bengaluru' } });
   });
 
   it('refuses a role field and invalid input with 422', async () => {
@@ -45,28 +56,77 @@ describe('registration', () => {
   });
 });
 
-describe('email verification', () => {
-  it('verifies once with a valid link; the link cannot be reused or guessed', async () => {
+describe('email verification by code', () => {
+  it('only verified students can sign in; the code verifies once and signs the student in', async () => {
     const c = client();
     await c.post('/api/auth/register', valid());
-    const token = await tokenFromEmail('ravi@example.com', '/verify-email');
-    expect((await c.post('/api/auth/verify-email', { token })).body.data.user.emailVerified).toBe(true);
-    expect((await c.post('/api/auth/verify-email', { token })).body.error.code).toBe('INVALID_TOKEN');
-    expect((await c.post('/api/auth/verify-email', { token: 'x'.repeat(43) })).status).toBe(400);
+    const code = await codeFromEmail('ravi@example.com');
+    const blocked = await client().post('/api/auth/login', { email: 'ravi@example.com', password: PASSWORD });
+    expect(blocked.status).toBe(403);
+    expect(blocked.body.error.code).toBe('EMAIL_NOT_VERIFIED');
+    expect(blocked.headers['set-cookie']).toBeUndefined();
+    // A wrong password never reveals the verification state.
+    expect((await client().post('/api/auth/login', { email: 'ravi@example.com', password: 'Wrong-pass-123' })).status).toBe(401);
+
+    const ok = await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code });
+    expect(ok.status).toBe(200);
+    expect(ok.body.data).toMatchObject({ signedIn: true, user: { emailVerified: true, role: 'student' } });
+    expect((await c.get('/api/auth/me')).status).toBe(200);
+    expect((await client().post('/api/auth/verify-otp', { email: 'ravi@example.com', code })).body.error.code).toBe('INVALID_CODE');
+    expect((await client().post('/api/auth/login', { email: 'ravi@example.com', password: PASSWORD })).status).toBe(200);
   });
 
-  it('refuses an expired link and sends a new one on request (same answer for unknown emails)', async () => {
+  it('refuses expired codes, stops after 5 wrong guesses, and answers unknown emails the same way', async () => {
     const c = client();
     await c.post('/api/auth/register', valid());
-    const token = await tokenFromEmail('ravi@example.com', '/verify-email');
-    await AuthTokenModel.updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
-    expect((await c.post('/api/auth/verify-email', { token })).status).toBe(400);
+    const code = await codeFromEmail('ravi@example.com');
+    await EmailOtpModel.updateMany({}, { $set: { expiresAt: new Date(Date.now() - 1000) } });
+    const expired = await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code });
+    const unknown = await c.post('/api/auth/verify-otp', { email: 'nobody@example.com', code });
+    expect(expired.status).toBe(400);
+    // Same error either way (each response carries its own random request id).
+    expect(unknown.body.error).toEqual(expired.body.error);
+    expect((await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code: '12ab56' })).status).toBe(422);
+
+    // A new code (after the resend cooldown), then 5 wrong guesses make even the right code stop working.
+    await EmailOtpModel.updateMany({}, { $set: { lastSentAt: new Date(Date.now() - 61_000) } });
+    expect((await c.post('/api/auth/resend-verification', { email: 'ravi@example.com' })).status).toBe(200);
+    const fresh = await codeFromEmail('ravi@example.com');
+    for (let i = 0; i < 5; i += 1) expect((await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code: otherCode(fresh) })).status).toBe(400);
+    expect((await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code: fresh })).status).toBe(400);
+    expect(await UserModel.countDocuments({ emailVerifiedAt: { $ne: null } })).toBe(0);
+  });
+
+  it('resends at most once a minute, with the same answer for unknown emails; only the newest code works', async () => {
+    const c = client();
+    await c.post('/api/auth/register', valid());
+    await processEmailQueue();
+    const mails = () => outbox.filter((m) => m.to === 'ravi@example.com');
+    expect(mails()).toHaveLength(1);
     const known = await c.post('/api/auth/resend-verification', { email: 'ravi@example.com' });
     const unknown = await c.post('/api/auth/resend-verification', { email: 'nobody@example.com' });
     expect(known.body).toEqual(unknown.body);
-    const fresh = await tokenFromEmail('ravi@example.com', '/verify-email');
-    expect(fresh).not.toBe(token);
-    expect((await c.post('/api/auth/verify-email', { token: fresh })).status).toBe(200);
+    await processEmailQueue();
+    expect(mails()).toHaveLength(1); // still within the cooldown
+    await EmailOtpModel.updateMany({}, { $set: { lastSentAt: new Date(Date.now() - 61_000) } });
+    await c.post('/api/auth/resend-verification', { email: 'ravi@example.com' });
+    await processEmailQueue();
+    expect(mails()).toHaveLength(2);
+    const [older, newer] = mails().map((m) => m.text.match(/Your code: (\d{6})/)![1]!);
+    if (older !== newer) expect((await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code: older! })).status).toBe(400);
+    expect((await c.post('/api/auth/verify-otp', { email: 'ravi@example.com', code: newer! })).status).toBe(200);
+  });
+
+  it('links from older verification emails still work once and cannot be guessed', async () => {
+    const c = client();
+    await c.post('/api/auth/register', valid());
+    const user = await UserModel.findOne({ email: 'ravi@example.com' }).lean();
+    const { issueToken } = await import('../src/services/token.service.js');
+    const { token } = await issueToken(String(user!._id), 'verify_email');
+    expect((await c.post('/api/auth/verify-email', { token })).body.data.user.emailVerified).toBe(true);
+    expect((await c.post('/api/auth/verify-email', { token })).body.error.code).toBe('INVALID_TOKEN');
+    expect((await c.post('/api/auth/verify-email', { token: 'x'.repeat(43) })).status).toBe(400);
+    expect(await AuthTokenModel.countDocuments({ usedAt: { $ne: null } })).toBe(1);
   });
 });
 
@@ -74,6 +134,7 @@ describe('sign-in and sessions', () => {
   it('signs in with a HttpOnly session cookie, and gives one generic error for wrong email or password', async () => {
     const c = client();
     await c.post('/api/auth/register', valid());
+    await verified(c);
     const ok = await c.post('/api/auth/login', { email: 'ravi@example.com', password: PASSWORD });
     expect(ok.status).toBe(200);
     const cookie = ok.headers['set-cookie']![0]!;
@@ -85,7 +146,7 @@ describe('sign-in and sessions', () => {
     const wrongPassword = await client().post('/api/auth/login', { email: 'ravi@example.com', password: 'Wrong-pass-123' });
     const noAccount = await client().post('/api/auth/login', { email: 'ghost@example.com', password: 'Wrong-pass-123' });
     expect(wrongPassword.status).toBe(401);
-    expect(wrongPassword.body).toEqual(noAccount.body);
+    expect(wrongPassword.body.error).toEqual(noAccount.body.error);
   });
 
   it('locks the account after 10 failed attempts', async () => {

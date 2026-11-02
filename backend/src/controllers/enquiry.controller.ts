@@ -25,6 +25,9 @@ export async function myEnquiry(req: Request, res: Response) {
 export async function studentMessage(req: Request, res: Response) {
   sendSuccess(res, await student.studentMessage(req, ref(req), body(req).body), { status: 201 });
 }
+export async function requestCallback(req: Request, res: Response) {
+  sendSuccess(res, await student.requestCallback(req, ref(req), body(req)));
+}
 export async function withdraw(req: Request, res: Response) {
   sendSuccess(res, await student.withdrawEnquiry(req, ref(req), body(req).reason));
 }
@@ -43,6 +46,13 @@ export const appointmentAction = (action: 'confirm' | 'reschedule' | 'cancel') =
 };
 
 // ---- Admin ----
+export async function exportCsv(req: Request, res: Response) {
+  const { csv, filename } = await admin.exportEnquiries(req, query(req));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.send(csv);
+}
 export async function list(req: Request, res: Response) {
   const { items, meta } = await admin.listEnquiries(req, query(req));
   sendSuccess(res, items, { meta });

@@ -1,0 +1,35 @@
+# LOCAL TESTING ONLY: runs the scaled stack on a developer machine without a .env.production file.
+#
+#   LBTEST_SESSION_SECRET=$(openssl rand -hex 32) docker compose -p education-consultancy-lbtest \
+#     -f docker-compose.yml -f docker-compose.scale.yml -f deploy/compose.lbtest.yml up -d --build
+#
+# Uses its own Compose project (and so its own MongoDB volume), placeholder email settings that send nothing,
+# and publishes MongoDB on 127.0.0.1:27027 for seeding sample data. Never use this file in production.
+
+x-lbtest-api: &lbtest-api
+  env_file: !reset []
+  environment:
+    SESSION_SECRET: ${LBTEST_SESSION_SECRET:?set LBTEST_SESSION_SECRET to a random 64-character value}
+    FRONTEND_URL: https://localhost
+    CORS_ORIGINS: http://127.0.0.1:8088,http://localhost:8088
+    # Placeholder sender; the key is not a real Brevo key, so emails are recorded as failed, never sent.
+    BREVO_API_KEY: xkeysib-lbtest-placeholder-not-a-real-key
+    EMAIL_FROM: noreply@example.com
+    EMAIL_DOMAIN_CHECK: "false"
+    # Load tests come from one address, so the per-IP limits are raised for this test stack only.
+    API_RATE_LIMIT: "100000"
+    LOGIN_RATE_LIMIT: "100000"
+    AUTH_RATE_LIMIT: "100000"
+    API_DOCS: "false"
+    LOG_LEVEL: warn
+
+services:
+  api: *lbtest-api
+  api2: *lbtest-api
+
+  mongo:
+    ports:
+      - "127.0.0.1:27027:27017"
+
+  web:
+    ports: !reset []

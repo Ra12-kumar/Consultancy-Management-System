@@ -5,7 +5,7 @@ import { ApiError } from '../utils/ApiError.js';
 import type { FeeInputBody } from '../validators/catalog.validators.js';
 import { actorFrom, audit } from './audit.service.js';
 import { refreshCollegeSummary, setDraftFeeRecalculator } from './catalog.service.js';
-import { calculateFee, type FeeInput } from './feeCalculator.js';
+import { calculateFee, storedTotals, type FeeInput } from './feeCalculator.js';
 
 type Lean = Record<string, unknown> & { _id: unknown };
 
@@ -83,7 +83,7 @@ export async function createFeeDraft(offeringId: string, input: FeeInputBody, re
     college: o.college,
     course: o.course,
     durationMonths: o.durationMonths,
-    officialTotalMinor: b.officialTotalMinor,
+    ...storedTotals(b),
     status: 'draft',
     version: await nextVersion(o._id, input.academicYear, input.intake),
     createdBy: req.user!.id,
@@ -102,7 +102,7 @@ export async function updateFeeDraft(id: string, input: FeeInputBody, req: Reque
   const moved = input.academicYear !== fee.academicYear || input.intake !== fee.intake;
   const updated = await CollegeFeeModel.findOneAndUpdate(
     { _id: id, status: 'draft' },
-    { $set: { ...input, durationMonths: o.durationMonths, officialTotalMinor: b.officialTotalMinor, ...(moved && { version: await nextVersion(o._id, input.academicYear, input.intake) }) } },
+    { $set: { ...input, durationMonths: o.durationMonths, ...storedTotals(b), ...(moved && { version: await nextVersion(o._id, input.academicYear, input.intake) }) } },
     { new: true, runValidators: true },
   ).lean();
   if (!updated) throw new ApiError(409, 'FEE_LOCKED', 'This fee was published or archived meanwhile. Reload and try again.');
@@ -127,7 +127,7 @@ export async function publishFee(id: string, req: Request) {
   try {
     published = await CollegeFeeModel.findOneAndUpdate(
       { _id: id, status: 'draft' },
-      { $set: { status: 'published', publishedBy: req.user!.id, publishedAt: new Date(), durationMonths: o.durationMonths, officialTotalMinor: b.officialTotalMinor } },
+      { $set: { status: 'published', publishedBy: req.user!.id, publishedAt: new Date(), durationMonths: o.durationMonths, ...storedTotals(b) } },
       { new: true },
     ).lean();
   } catch (err) {
@@ -162,6 +162,6 @@ setDraftFeeRecalculator(async (offeringId, durationMonths) => {
   const drafts = await CollegeFeeModel.find({ collegeCourse: offeringId, status: 'draft' }).lean();
   for (const d of drafts) {
     const b = breakdownOf({ ...feeInput(d as Lean), durationMonths });
-    await CollegeFeeModel.updateOne({ _id: d._id, status: 'draft' }, { $set: { durationMonths, officialTotalMinor: b.officialTotalMinor } });
+    await CollegeFeeModel.updateOne({ _id: d._id, status: 'draft' }, { $set: { durationMonths, ...storedTotals(b) } });
   }
 });

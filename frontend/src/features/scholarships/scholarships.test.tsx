@@ -37,9 +37,9 @@ beforeEach(() => vi.clearAllMocks());
 describe("scholarships", () => {
   it("describes benefits and converts the admin form to paise", () => {
     expect(benefitText(scholarship.benefit)).toBe("25% of tuition (up to ₹50,000)");
-    expect(benefitText({ type: "service_charge_percent", value: 50, maxMinor: null, description: "" })).toBe("50% off the EduPath service charge");
+    expect(benefitText({ type: "service_charge_percent", value: 50, maxMinor: null, description: "" })).toBe("50% off the Udaan service charge");
     const body = scholarshipPayload({
-      name: "Need grant", slug: "need-grant", providerType: "consultancy", providerName: "EduPath", college: "c1", description: "",
+      name: "Need grant", slug: "need-grant", providerType: "consultancy", providerName: "Udaan", college: "c1", description: "",
       benefitType: "fixed_amount", benefitValue: "40,000", benefitMax: "", benefitDescription: "", courses: [], minPercentage: "60", maxIncome: "6,00,000",
       states: [], categories: ["sc"], genders: [], notes: "", documents: "Income certificate, Marksheet", academicYear: "2026-27", deadline: "", officialUrl: "", sourceRef: "", lastVerifiedAt: "",
     });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { BENEFIT_TYPES, CATEGORIES, GENDERS, PROVIDER_TYPES, SCHOLARSHIP_APP_STATUSES, SCHOLARSHIP_STATUSES } from '../models/Scholarship.js';
-import { objectIdSchema, pagination } from './common.js';
+import { objectIdSchema, pagination, patchOf } from './common.js';
 
 const text = (max: number) => z.string().trim().max(max);
 const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Use lowercase letters, numbers and hyphens').min(2).max(80);
@@ -62,7 +62,7 @@ export const scholarshipBody = z
     college: objectIdSchema.nullable().default(null),
     description: text(4000).default(''),
     benefit,
-    eligibility: eligibility.default({}),
+    eligibility: eligibility.prefault({}),
     documentsRequired: z.array(text(120).min(2)).max(15).default([]),
     academicYear: z.union([z.literal(''), z.string().regex(/^\d{4}-\d{2}$/, 'Use the form 2026-27')]).default(''),
     applicationDeadline: z.coerce.date().nullable().default(null),
@@ -71,7 +71,7 @@ export const scholarshipBody = z
     lastVerifiedAt: z.coerce.date().nullable().default(null),
   })
   .strict();
-export const scholarshipPatch = scholarshipBody.partial().strict();
+export const scholarshipPatch = patchOf(scholarshipBody).strict();
 export const adminScholarshipsQuery = z.object({ q: text(80).optional(), status: z.enum(SCHOLARSHIP_STATUSES).optional(), ...pagination }).strict();
 export const adminApplicationsQuery = z.object({ q: text(80).optional(), status: z.enum(SCHOLARSHIP_APP_STATUSES).optional(), scholarship: objectIdSchema.optional(), ...pagination }).strict();
 export const reviewBody = z.object({ status: z.enum(['under_review', 'documents_pending']), note: text(1000).default(''), internalNote: text(2000).optional() }).strict();

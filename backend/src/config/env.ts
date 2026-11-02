@@ -23,7 +23,7 @@ const csv = z.preprocess(emptyToUndefined, z.string().default('')).transform((v)
 const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    APP_NAME: z.string().default('EduPath Consultancy'),
+    APP_NAME: z.string().default('Udaan'),
     BACKEND_PORT: z.coerce.number().int().min(1).max(65535).default(5100),
     FRONTEND_URL: z.string().url().default('http://localhost:3000'),
     // Browser origins allowed to call the API (CORS) and to send cookie-authenticated writes (CSRF check).
@@ -43,7 +43,12 @@ const schema = z
     SMTP_USER: optionalString,
     SMTP_PASS: optionalString,
     EMAIL_FROM: z.preprocess(emptyToUndefined, z.string().email('must be an email address').optional()),
-    EMAIL_FROM_NAME: z.string().default('EduPath Consultancy'),
+    EMAIL_FROM_NAME: z.string().default('Udaan'),
+    // Registration refuses email domains that cannot receive mail (DNS check). Set to false to turn it off.
+    EMAIL_DOMAIN_CHECK: z.preprocess(emptyToUndefined, z.enum(['true', 'false']).optional()),
+    // Brevo transactional email API key (xkeysib-…). With EMAIL_FROM (a Brevo-verified sender) it is used
+    // instead of SMTP, so the SMTP settings are then not needed.
+    BREVO_API_KEY: z.preprocess(emptyToUndefined, z.string().regex(/^xkeysib-[A-Za-z0-9-]+$/, 'must be a Brevo API key (xkeysib-…)').optional()),
     // Team addresses told about new registrations (comma separated). Optional.
     ADMIN_NOTIFY_EMAILS: csv.pipe(z.array(z.string().email('each must be an email address'))),
     // Private file storage (photos, documents). Relative paths are resolved from the project root; keep it
@@ -55,6 +60,15 @@ const schema = z
     RAZORPAY_KEY_ID: optionalString,
     RAZORPAY_KEY_SECRET: optionalString,
     RAZORPAY_WEBHOOK_SECRET: optionalString,
+    // CollegeDB (https://docs.collegedb.in): third-party college-name search. Server-side only; optional.
+    COLLEGEDB_API_KEY: z.preprocess(emptyToUndefined, z.string().regex(/^cdb_[a-f0-9]{32,64}$/, 'must look like cdb_ followed by hex characters').optional()),
+    // Redis (optional): shared cache for public catalogue data and rate-limit counters shared by every API
+    // instance. Without it the API caches nothing and counts rate limits per process.
+    REDIS_URL: z.preprocess(emptyToUndefined, z.string().regex(/^rediss?:\/\//, 'must be a redis:// or rediss:// URL').optional()),
+    // Prefix for every Redis key, so several environments can share one Redis safely.
+    REDIS_PREFIX: z.preprocess(emptyToUndefined, z.string().regex(/^[a-z0-9:_-]{1,40}$/).default('consultancy')),
+    // How long public catalogue answers stay cached (seconds). Admin changes clear the cache at once.
+    CACHE_TTL_SECONDS: z.coerce.number().int().min(5).max(86_400).default(300),
   })
   .superRefine((env, ctx) => {
     // This project's data must never go to the Gym application's database.
@@ -64,8 +78,9 @@ const schema = z
     if (env.NODE_ENV === 'production') {
       if (!env.FRONTEND_URL.startsWith('https://')) ctx.addIssue({ code: 'custom', path: ['FRONTEND_URL'], message: 'must be https in production' });
       if (env.SESSION_SECRET.startsWith('replace_with')) ctx.addIssue({ code: 'custom', path: ['SESSION_SECRET'], message: 'must be a real secret in production' });
-      for (const key of ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_FROM'] as const) {
-        if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: 'email (SMTP) must be fully configured in production' });
+      const keys = env.BREVO_API_KEY ? (['EMAIL_FROM'] as const) : (['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_FROM'] as const);
+      for (const key of keys) {
+        if (!env[key]) ctx.addIssue({ code: 'custom', path: [key], message: 'email (Brevo API or SMTP) must be fully configured in production' });
       }
     }
   });
@@ -78,17 +93,21 @@ function load() {
     process.exit(1);
   }
   const data = parsed.data;
-  const missingSmtp = (['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_FROM'] as const).filter((k) => !data[k]);
+  const brevoApi = Boolean(data.BREVO_API_KEY && data.EMAIL_FROM);
+  const missingSmtp = brevoApi ? [] : (['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_FROM'] as const).filter((k) => !data[k]);
   return Object.freeze({
     ...data,
     CORS_ORIGINS: data.CORS_ORIGINS.length ? data.CORS_ORIGINS : [data.FRONTEND_URL],
     isProduction: data.NODE_ENV === 'production',
     isTest: data.NODE_ENV === 'test',
-    // Email is sent only when every SMTP setting is present; otherwise it is logged (and shown as not sent).
+    // Email is sent through the Brevo API (key + sender) or SMTP (every setting present); otherwise it is logged
+    // (and shown as not sent). `smtpConfigured` means "email can be sent" either way.
+    brevoApi,
     smtpConfigured: missingSmtp.length === 0,
     smtpMissing: missingSmtp,
     uploadDir: path.resolve(projectRoot, data.UPLOAD_DIR),
     paymentsConfigured: Boolean(data.RAZORPAY_KEY_ID && data.RAZORPAY_KEY_SECRET),
+    collegeDbConfigured: Boolean(data.COLLEGEDB_API_KEY),
     apiDocs: data.API_DOCS ? data.API_DOCS === 'true' : data.NODE_ENV !== 'production',
   });
 }

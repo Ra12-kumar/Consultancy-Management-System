@@ -12,6 +12,7 @@ const NAV = [
   { href: "/student/payments", label: "Payments" },
   { href: "/student/notifications", label: "Notifications" },
   { href: "/student/feedback", label: "Feedback and support" },
+  { href: "/courses/browse", label: "Browse courses" },
   { href: "/student/shortlist", label: "My selected colleges" },
   { href: "/student/comparisons", label: "My comparisons" },
   { href: "/student/settings", label: "Account settings" },

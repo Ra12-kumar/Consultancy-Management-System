@@ -27,7 +27,14 @@ jobs:
         options: >-
           --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
           --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 10
     env:
+      # Redis tests (cache, shared rate limits) use database 15 of the throwaway Redis service.
+      REDIS_URL_TEST: redis://127.0.0.1:6379/15
       # Settings for the build and tests (no real secrets; tests set their own values).
       SESSION_SECRET: ci-session-secret-that-is-long-enough-0123456789
       MONGODB_URI: mongodb://127.0.0.1:27017/education_consultancy_ci
@@ -42,8 +49,20 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      # Unit and API tests with coverage (backend and frontend); the summary is kept with the run.
+      - run: npm run test:coverage
+      - name: Upload the coverage summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            backend/coverage/coverage-summary.json
+            frontend/coverage/coverage-summary.json
+          retention-days: 14
       - run: npm run build
+      # Known high or critical vulnerabilities in production dependencies fail the build.
+      - run: npm audit --omit=dev --audit-level=high
 
   e2e:
     name: Browser end-to-end tests

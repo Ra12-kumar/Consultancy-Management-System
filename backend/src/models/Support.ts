@@ -2,7 +2,8 @@ import mongoose, { type InferSchemaType } from 'mongoose';
 
 // ---- Stored files (private uploads) ----
 
-export const FILE_KINDS = ['photo', 'document'] as const;
+// college_image: public college and course pictures (gallery, logo, course photo). brochure: public PDF brochures.
+export const FILE_KINDS = ['photo', 'document', 'college_image', 'brochure'] as const;
 
 // Metadata for a file kept in the private upload folder (env.uploadDir). The file itself is never served
 // statically: /api/files/:id checks who is asking first.
@@ -13,7 +14,7 @@ const storedFileSchema = new mongoose.Schema(
     enquiry: { type: mongoose.Schema.Types.ObjectId, ref: 'Enquiry', default: null },
     documentId: { type: mongoose.Schema.Types.ObjectId, default: null },
     // Random storage key (never the user's file name).
-    key: { type: String, required: true, match: /^[a-z]+\/[a-f0-9]{32}\.(jpg|png|webp|pdf)$/ },
+    key: { type: String, required: true, match: /^[a-z_]+\/[a-f0-9]{32}\.(jpg|png|webp|pdf)$/ },
     originalName: { type: String, trim: true, maxlength: 120, default: '' },
     mime: { type: String, enum: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], required: true },
     size: { type: Number, required: true, min: 1 },

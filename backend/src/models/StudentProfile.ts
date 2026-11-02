@@ -39,6 +39,17 @@ const studentProfileSchema = new mongoose.Schema(
       percentage: { type: Number, min: 0, max: 100, default: null },
       entranceExams: { type: [examSchema], default: [] },
     },
+    // Marks by stage (percentages), used for eligibility checks. All optional.
+    marks: {
+      class10: { percentage: { type: Number, min: 0, max: 100, default: null }, board: { type: String, trim: true, maxlength: 120, default: '' }, year: { type: Number, min: 1990, max: 2100, default: null } },
+      class12: { percentage: { type: Number, min: 0, max: 100, default: null }, board: { type: String, trim: true, maxlength: 120, default: '' }, year: { type: Number, min: 1990, max: 2100, default: null }, stream: { type: String, trim: true, maxlength: 60, default: '' } },
+      graduation: { percentage: { type: Number, min: 0, max: 100, default: null }, degree: { type: String, trim: true, maxlength: 120, default: '' }, year: { type: Number, min: 1990, max: 2100, default: null } },
+    },
+    // What the student would like to study and where (used for college suggestions).
+    preferences: {
+      course: { type: String, trim: true, maxlength: 120, default: '' },
+      location: { type: String, trim: true, maxlength: 120, default: '' },
+    },
   },
   { timestamps: true },
 );

@@ -54,4 +54,4 @@ export function useAuth() {
   return ctx;
 }
 
-export const homeFor = (user: User | null) => (user?.role === "admin" ? "/admin" : "/student");
+export const homeFor = (user: User | null) => (user?.role === "admin" ? "/admin" : user?.role === "counsellor" ? "/counsellor" : "/student");

@@ -12,7 +12,12 @@ const siteSettingsSchema = new mongoose.Schema(
       whatsapp: { type: String, trim: true, maxlength: 30, default: '' },
       address: { type: String, trim: true, maxlength: 400, default: '' },
       officeHours: { type: String, trim: true, maxlength: 200, default: '' },
+      // Official social media pages (footer and contact page).
+      instagram: { type: String, trim: true, maxlength: 300, default: '' },
+      facebook: { type: String, trim: true, maxlength: 300, default: '' },
     },
+    // Enquiry handling: automatic assignment of new enquiries to the least busy active counsellor.
+    crm: { autoAssign: { type: Boolean, default: false } },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true },

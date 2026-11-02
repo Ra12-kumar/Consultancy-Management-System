@@ -18,6 +18,7 @@ const LOCK_MS = 60_000;
 let timer: NodeJS.Timeout | null = null;
 let running = false;
 let again = false;
+let lastDigestCheck = 0;
 
 const sanitize = (msg: string) => msg.replace(/xsmtpsib-[A-Za-z0-9-]+|xkeysib-[A-Za-z0-9-]+/g, '[key]').slice(0, 300);
 
@@ -46,21 +47,22 @@ export async function processEmailQueue(now = new Date()) {
       continue;
     }
     try {
-      const { messageId } = await transport.send({ to: msg.to, subject: rendered.subject, html: rendered.html, text: rendered.text });
+      const { messageId, response } = await transport.send({ to: msg.to, subject: rendered.subject, html: rendered.html, text: rendered.text });
       await EmailDeliveryModel.updateOne({ _id: msg._id }, { $set: { status: 'sent', sentAt: new Date(), providerMessageId: messageId, lockedUntil: null, lastError: '' } });
-      logger.info({ template: msg.template, messageId }, 'Email sent');
+      // "sent" means the provider accepted it; Brevo's own logs show whether the mailbox received it.
+      logger.info({ template: msg.template, messageId, providerResponse: response ?? null }, 'Email accepted by provider');
     } catch (err) {
-      const e = err as { responseCode?: number; message?: string };
+      const e = err as { responseCode?: number; message?: string; permanent?: boolean };
       const attempts = msg.attempts;
       // Permanent rejections (bad recipient, auth or sender refused) are not retried for ever.
-      const permanent = e.responseCode != null && e.responseCode >= 500 && e.responseCode !== 535 ? attempts >= 2 : false;
+      const permanent = e.permanent || (e.responseCode != null && e.responseCode >= 500 && e.responseCode !== 535) ? attempts >= 2 : false;
       const failed = permanent || attempts >= MAX_ATTEMPTS;
       const delay = RETRY_DELAYS_MS[Math.min(attempts - 1, RETRY_DELAYS_MS.length - 1)]!;
       await EmailDeliveryModel.updateOne(
         { _id: msg._id },
         { $set: { status: failed ? 'failed' : 'retrying', lockedUntil: null, lastError: sanitize(`${e.responseCode ?? ''} ${e.message ?? 'Send failed'}`.trim()), nextAttemptAt: new Date(now.getTime() + delay) } },
       );
-      logger.warn({ template: msg.template, attempts, failed, reason: sanitize(e.message ?? '') }, 'Email send failed');
+      logger.warn({ template: msg.template, attempts, failed, providerStatus: e.responseCode ?? null, reason: sanitize(e.message ?? '') }, 'Email send failed');
     }
   }
 }
@@ -72,6 +74,10 @@ async function run() {
   }
   running = true;
   try {
+    if (Date.now() - lastDigestCheck > 10 * 60_000) {
+      lastDigestCheck = Date.now();
+      await (await import('./counsellor.service.js')).sendFollowUpDigests();
+    }
     do {
       again = false;
       await processEmailQueue();

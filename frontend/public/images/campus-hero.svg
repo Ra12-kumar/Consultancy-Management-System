@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" preserveAspectRatio="xMidYMid slice">
+  <!-- Original illustration of a generic campus (not any real institution). Replace with a licensed photo if wanted. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a8a"/>
+      <stop offset="0.55" stop-color="#c2410c"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5e6d3"/>
+      <stop offset="1" stop-color="#d6b48c"/>
+    </linearGradient>
+    <linearGradient id="lawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f6212"/>
+      <stop offset="1" stop-color="#1a2e05"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="700" fill="url(#sky)"/>
+  <circle cx="1240" cy="330" r="90" fill="#fde68a" opacity="0.55"/>
+  <!-- distant blocks -->
+  <g fill="#7c2d12" opacity="0.35">
+    <rect x="80" y="330" width="220" height="190"/>
+    <rect x="1300" y="320" width="240" height="200"/>
+    <rect x="200" y="290" width="90" height="230"/>
+  </g>
+  <!-- main building -->
+  <g>
+    <rect x="430" y="330" width="740" height="230" fill="url(#stone)"/>
+    <polygon points="700,330 800,260 900,330" fill="#e7cfae"/>
+    <rect x="740" y="215" width="120" height="60" fill="#e7cfae"/>
+    <path d="M740 215 Q800 120 860 215 Z" fill="#b45309"/>
+    <rect x="796" y="104" width="8" height="40" fill="#78350f"/>
+    <rect x="430" y="318" width="740" height="16" fill="#c9a77d"/>
+    <g fill="#a8835a">
+      <rect x="700" y="340" width="14" height="220"/><rect x="738" y="340" width="14" height="220"/>
+      <rect x="776" y="340" width="14" height="220"/><rect x="810" y="340" width="14" height="220"/>
+      <rect x="848" y="340" width="14" height="220"/><rect x="886" y="340" width="14" height="220"/>
+    </g>
+    <g fill="#7c5a3a" opacity="0.8">
+      <rect x="470" y="370" width="36" height="56" rx="18"/><rect x="530" y="370" width="36" height="56" rx="18"/><rect x="590" y="370" width="36" height="56" rx="18"/>
+      <rect x="470" y="460" width="36" height="56" rx="18"/><rect x="530" y="460" width="36" height="56" rx="18"/><rect x="590" y="460" width="36" height="56" rx="18"/>
+      <rect x="974" y="370" width="36" height="56" rx="18"/><rect x="1034" y="370" width="36" height="56" rx="18"/><rect x="1094" y="370" width="36" height="56" rx="18"/>
+      <rect x="974" y="460" width="36" height="56" rx="18"/><rect x="1034" y="460" width="36" height="56" rx="18"/><rect x="1094" y="460" width="36" height="56" rx="18"/>
+    </g>
+    <rect x="770" y="470" width="60" height="90" rx="30" fill="#5b3a1e"/>
+  </g>
+  <!-- lawn, path, trees -->
+  <rect y="540" width="1600" height="160" fill="url(#lawn)"/>
+  <polygon points="760,560 840,560 1000,700 600,700" fill="#d6b48c" opacity="0.9"/>
+  <g fill="#14532d">
+    <circle cx="300" cy="520" r="70"/><circle cx="360" cy="545" r="55"/><rect x="295" y="560" width="14" height="60" fill="#3f2a14"/>
+    <circle cx="1300" cy="515" r="75"/><circle cx="1235" cy="545" r="50"/><rect x="1295" y="560" width="14" height="60" fill="#3f2a14"/>
+    <circle cx="80" cy="560" r="60"/><circle cx="1530" cy="560" r="60"/>
+  </g>
+</svg>

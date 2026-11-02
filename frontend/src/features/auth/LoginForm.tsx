@@ -46,6 +46,8 @@ export default function LoginForm() {
       }
       signedIn(res.user!);
     } catch (err) {
+      // Right password, unverified email: a fresh code was emailed, so go and enter it.
+      if ((err as ApiError).code === "EMAIL_NOT_VERIFIED") return hardNavigate(`/verify-email?sent=1&email=${encodeURIComponent(email.trim())}`);
       setError((err as ApiError).message);
       setBusy(false);
     }

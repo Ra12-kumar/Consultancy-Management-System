@@ -42,13 +42,16 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     return;
   }
   const apiError = normalise(err);
+  // The request's correlation id (also in the X-Request-Id header and the server log), so a user's report can be
+  // matched to the log entry.
+  const requestId = (req as Request & { id?: string }).id;
   if (!apiError || apiError.statusCode >= 500) {
-    (req.log ?? logger).error({ err, path: req.path, method: req.method }, apiError ? apiError.message : 'Unhandled error');
+    (req.log ?? logger).error({ err, path: req.path, method: req.method, requestId }, apiError ? apiError.message : 'Unhandled error');
   }
   if (!apiError) {
-    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' }, requestId });
     return;
   }
   if (apiError.statusCode === 503) res.set('Retry-After', '5');
-  res.status(apiError.statusCode).json({ success: false, error: { code: apiError.code, message: apiError.message, ...(apiError.details && { details: apiError.details }) } });
+  res.status(apiError.statusCode).json({ success: false, error: { code: apiError.code, message: apiError.message, ...(apiError.details && { details: apiError.details }) }, requestId });
 }

@@ -6,11 +6,14 @@ import { useState } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Feedback";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { COLLEGE_TYPES, FREQUENCIES, fmtDay, formatINR, formatLakh } from "@/lib/format";
+import { CATEGORIES, COLLEGE_TYPES, FREQUENCIES, OWNERSHIP, fmtDay, formatINR, formatLakh } from "@/lib/format";
+import { safeHref } from "@/lib/safeUrl";
 import type { CollegeCard as Card, FeeBreakdown as Breakdown } from "@/types/catalog";
+import type { LeadSource } from "@/types/enquiry";
 import { COMPARE_MAX, compareStore, useCompare, useShortlist } from "./stores";
 
 export const SAMPLE_LABEL = "Sample data – not a real institution";
+export const BASIC_LABEL = "Basic listing – courses and fees not yet verified";
 
 export function SampleBadge() {
   return (
@@ -110,62 +113,174 @@ export function CompareToggle({ slug, name, size = "sm" }: { slug: string; name:
   );
 }
 
-export function CollegeCard({ college }: { college: Card }) {
-  const shown = college.courses.slice(0, 4);
+// The fee line of a card: the verified fee on the searched basis, or an honest "not verified" (never ₹0).
+export function CardFeeLine({ college }: { college: Card }) {
+  const fee = college.fee;
+  if (!fee) {
+    return college.feeFromMinor != null ? (
+      <>
+        <span className="text-muted">Official course fees from </span>
+        <strong className="text-base">{formatLakh(college.feeFromMinor)}</strong>
+      </>
+    ) : (
+      <span className="text-muted">Fee not verified</span>
+    );
+  }
+  if (fee.status === "verified" && fee.amountMinor != null) {
+    return (
+      <>
+        <span className="text-muted">Official fees from </span>
+        <strong className="text-base">{formatLakh(fee.amountMinor)}</strong>
+        <span className="text-muted">
+          {fee.basis === "annual" ? " a year" : " for the whole course"}
+          {fee.academicYear && ` (${fee.academicYear})`}
+        </span>
+      </>
+    );
+  }
+  if (fee.status === "not_comparable") return <span className="text-muted">No yearly fee to compare – charged as a whole-course or one-time amount</span>;
+  return <span className="text-muted">Fee not verified</span>;
+}
+
+// The college's own photo (added by an admin), or a neutral placeholder. Never another college's image.
+// Photos uploaded through the admin gallery are served by our own API.
+export const ownImage = (url: string | null | undefined) => (url && /^\/api\/colleges\/images\/[a-f0-9]{24}$/.test(url) ? url : null);
+
+export function CollegeCover({ name, coverUrl, className = "" }: { name: string; coverUrl: string | null | undefined; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = ownImage(coverUrl) ?? safeHref(coverUrl, { httpsOnly: true });
+  if (src && !failed) {
+    // eslint-disable-next-line @next/next/no-img-element -- our own uploaded photos or admin-provided https URLs
+    return <img src={src} alt={`Campus of ${name}`} loading="lazy" decoding="async" onError={() => setFailed(true)} className={`h-full w-full object-cover ${className}`} />;
+  }
   return (
-    <article className="flex flex-col rounded-2xl border border-line bg-surface p-5 shadow-sm">
-      <div className="flex gap-4">
-        <CollegeLogo name={college.name} logoUrl={college.logoUrl} />
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold leading-snug">
-            <Link href={`/colleges/${college.slug}`} className="hover:underline">
-              {college.name}
-            </Link>
-          </h3>
-          <p className="mt-0.5 text-sm text-muted">{[college.city, college.state].filter(Boolean).join(", ") || "Location to be confirmed"}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <Badge>{COLLEGE_TYPES[college.type] ?? college.type}</Badge>
-            {college.featured && <Badge tone="gold">Featured</Badge>}
-            {college.accreditations.map((a) => (
-              <Badge key={a.body} tone="success">
-                {a.body}
-                {a.grade ? ` ${a.grade}` : ""}
-              </Badge>
-            ))}
+    <div className={`flex h-full w-full items-end justify-end bg-gradient-to-br from-primary to-primary/70 p-3 ${className}`}>
+      <svg aria-hidden="true" viewBox="0 0 64 40" className="absolute inset-0 m-auto h-1/2 w-1/2 text-primary-fg/25" fill="currentColor">
+        <path d="M32 2 4 14v4h56v-4L32 2Zm-22 18v14h6V20h-6Zm10 0v14h6V20h-6Zm12 0v14h6V20h-6Zm10 0v14h6V20h-6ZM4 36v4h56v-4H4Z" />
+      </svg>
+      <span className="relative text-xs font-medium text-primary-fg/80">Photo not available</span>
+    </div>
+  );
+}
+
+// Outbound link to the college's official website, only when the URL is a safe absolute http(s) address.
+export function WebsiteLink({ url, name, size = "sm" }: { url: string | null | undefined; name: string; size?: "sm" | "md" }) {
+  const href = safeHref(url);
+  if (!href) return <span className="inline-flex min-h-9 items-center text-xs text-muted">Official website not available</span>;
+  const pad = size === "md" ? "min-h-11 px-4 text-sm" : "min-h-9 px-3 text-sm";
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer nofollow" className={`inline-flex items-center gap-1 rounded-xl border border-line font-semibold hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none ${pad}`}>
+      Visit Official Website <span aria-hidden="true">↗</span>
+      <span className="sr-only">for {name} (opens in a new tab)</span>
+    </a>
+  );
+}
+
+export function enquiryHref(slug: string, courseSlug?: string | null, source: LeadSource = "college_search") {
+  return `/enquire?college=${encodeURIComponent(slug)}${courseSlug ? `&course=${encodeURIComponent(courseSlug)}` : ""}&source=${source}`;
+}
+
+const isPast = (d: Date) => d.getTime() < Date.now();
+
+// Admission session and deadline, when an admin has entered them.
+export function AdmissionLine({ session, deadline }: { session?: string; deadline?: string | null }) {
+  if (!session && !deadline) return null;
+  const date = deadline ? new Date(deadline) : null;
+  const passed = date ? isPast(date) : false;
+  return (
+    <p className="mt-1 text-xs text-muted">
+      {session && <>Session {session}</>}
+      {session && date && " · "}
+      {date && (
+        <span className={passed ? "" : "font-semibold text-foreground"}>
+          {passed ? "Applications closed " : "Apply by "}
+          {date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}
+        </span>
+      )}
+    </p>
+  );
+}
+
+export function CollegeCard({ college, course, source = "college_search" }: { college: Card; course?: string; source?: LeadSource }) {
+  const shown = college.courses.slice(0, 4);
+  const basic = college.listingLevel === "basic";
+  const place = [college.city || college.district, college.state].filter(Boolean).join(", ");
+  // Prefill the enquiry with the searched course when this college offers it.
+  const enquiryCourse = course && college.courses.some((c) => c.slug === course) ? course : null;
+  return (
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition-shadow hover:shadow-md">
+      <div className="relative aspect-[16/9] overflow-hidden bg-surface-2">
+        <CollegeCover name={college.name} coverUrl={college.imageUrl ?? college.coverUrl} />
+        {college.featured && (
+          <span className="absolute top-3 left-3 rounded-full bg-white/95 px-2.5 py-0.5 text-xs font-bold text-primary shadow">Featured</span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col p-5 pt-0">
+        <div className="relative z-10 -mt-7 flex items-end gap-3">
+          <span className="rounded-xl bg-surface p-0.5 shadow-sm">
+            <CollegeLogo name={college.name} logoUrl={college.logoUrl} />
+          </span>
+        </div>
+        <h3 className="mt-3 font-semibold leading-snug">
+          <Link href={`/colleges/${college.slug}`} className="hover:underline">
+            {college.name}
+          </Link>
+        </h3>
+        <p className="mt-0.5 text-sm text-muted">
+          {place || "Location to be confirmed"}
+          {college.aisheCode && <span className="whitespace-nowrap"> · AISHE {college.aisheCode}</span>}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {college.category && <Badge>{CATEGORIES[college.category] ?? college.category}</Badge>}
+          {college.ownership ? <Badge>{OWNERSHIP[college.ownership] ?? college.ownership}</Badge> : <Badge>{COLLEGE_TYPES[college.type] ?? college.type}</Badge>}
+          {college.stale && <Badge tone="warning">May be out of date</Badge>}
+          {college.accreditations.map((a) => (
+            <Badge key={a.body} tone="success">
+              {a.body}
+              {a.grade ? ` ${a.grade}` : ""}
+            </Badge>
+          ))}
+        </div>
+        {college.isSample && (
+          <div className="mt-3">
+            <SampleBadge />
+          </div>
+        )}
+        {basic && !college.isSample && (
+          <p className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted">
+            {BASIC_LABEL}
+            {college.source?.name && `. Listed from ${college.source.name}.`}
+          </p>
+        )}
+        {shown.length > 0 && (
+          <p className="mt-3 text-sm">
+            <span className="text-muted">Courses: </span>
+            {shown.map((c) => c.name).join(" · ")}
+            {college.courses.length > shown.length && <span className="text-muted"> +{college.courses.length - shown.length} more</span>}
+          </p>
+        )}
+        <p className="mt-3 text-sm">
+          <CardFeeLine college={college} />
+        </p>
+        <AdmissionLine session={college.academicSession} deadline={college.admissionDeadline} />
+        <div className="mt-1">
+          <VerifiedLine isSample={college.isSample} lastVerifiedAt={college.lastVerifiedAt} />
+        </div>
+        <div className="mt-auto pt-4">
+          <div className="grid grid-cols-2 gap-2">
+            <ButtonLink href={`/colleges/${college.slug}`} size="sm" variant="secondary">
+              View details
+            </ButtonLink>
+            <ButtonLink href={enquiryHref(college.slug, enquiryCourse, source)} size="sm" variant="gold" className="text-center leading-tight">
+              Enquire Now
+            </ButtonLink>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <WebsiteLink url={college.website} name={college.name} />
+            <CompareToggle slug={college.slug} name={college.name} />
+            <ShortlistButton collegeId={college.id} />
           </div>
         </div>
-      </div>
-      {college.isSample && (
-        <div className="mt-3">
-          <SampleBadge />
-        </div>
-      )}
-      {shown.length > 0 && (
-        <p className="mt-3 text-sm">
-          <span className="text-muted">Courses: </span>
-          {shown.map((c) => c.name).join(" · ")}
-          {college.courses.length > shown.length && <span className="text-muted"> +{college.courses.length - shown.length} more</span>}
-        </p>
-      )}
-      <p className="mt-3 text-sm">
-        {college.feeFromMinor != null ? (
-          <>
-            <span className="text-muted">Official course fees from </span>
-            <strong className="text-base">{formatLakh(college.feeFromMinor)}</strong>
-          </>
-        ) : (
-          <span className="text-muted">Fees not published yet</span>
-        )}
-      </p>
-      <div className="mt-1">
-        <VerifiedLine isSample={college.isSample} lastVerifiedAt={college.lastVerifiedAt} />
-      </div>
-      <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <ButtonLink href={`/colleges/${college.slug}`} size="sm">
-          View details
-        </ButtonLink>
-        <CompareToggle slug={college.slug} name={college.name} />
-        <ShortlistButton collegeId={college.id} />
       </div>
     </article>
   );
@@ -231,7 +346,7 @@ export function FeeBreakdown({ breakdown, caption }: { breakdown: Breakdown; cap
           {total("Official college fees (whole course)", breakdown.officialTotalMinor)}
           {breakdown.discountMinor > 0 && total("Discount on tuition", -breakdown.discountMinor, false, breakdown.discountNote || undefined)}
           {section("Consultancy service charge (separate from college fees)")}
-          {total("EduPath service charge", breakdown.consultancyServiceChargeMinor)}
+          {total("Udaan service charge", breakdown.consultancyServiceChargeMinor)}
           {total("Estimated total (official fees after discount + service charge)", breakdown.estimatedTotalMinor, true)}
           {optional.length > 0 && section("Optional – only if you choose them")}
           {optional.map(row)}

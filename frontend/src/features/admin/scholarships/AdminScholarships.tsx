@@ -173,7 +173,7 @@ function ScholarshipForm({ initial, onSaved }: { initial?: AdminScholarship; onS
             ))}
           </SelectField>
         ) : (
-          <TextField label="Provider" placeholder={f.providerType === "government" ? "e.g. Ministry / state department" : "EduPath Consultancy"} value={f.providerName} onChange={(e) => set({ providerName: e.target.value })} />
+          <TextField label="Provider" placeholder={f.providerType === "government" ? "e.g. Ministry / state department" : "Udaan"} value={f.providerName} onChange={(e) => set({ providerName: e.target.value })} />
         )}
       </div>
       <TextAreaField label="Description" value={f.description} onChange={(e) => set({ description: e.target.value })} maxLength={4000} />
@@ -228,7 +228,7 @@ export function AdminScholarshipList() {
   }, [f.q, f.status, f.page]);
   return (
     <div>
-      <PageTitle title="Scholarships" subtitle="College scholarships, EduPath offers and government schemes. Rules drive students' preliminary eligibility; awards are decided on each application." action={!creating ? <Button onClick={() => setCreating(true)}>Add scholarship</Button> : undefined} />
+      <PageTitle title="Scholarships" subtitle="College scholarships, Udaan offers and government schemes. Rules drive students' preliminary eligibility; awards are decided on each application." action={!creating ? <Button onClick={() => setCreating(true)}>Add scholarship</Button> : undefined} />
       {creating && (
         <Card className="mb-6">
           <ScholarshipForm onSaved={(s) => router.push(`/admin/scholarships/${s.id}`)} />

@@ -61,7 +61,7 @@ describe('counselling appointments', () => {
   it('sends one reminder for sessions in the next 24 hours, and again after a reschedule', async () => {
     const w = await enquiryWorld();
     const { id } = await submitEnquiry(w);
-    const soon = await w.admin.c.post(`/api/admin/enquiries/${id}/appointments`, { startsAt: inHours(5), mode: 'office', meetingDetails: 'EduPath office, 2nd floor' });
+    const soon = await w.admin.c.post(`/api/admin/enquiries/${id}/appointments`, { startsAt: inHours(5), mode: 'office', meetingDetails: 'Udaan office, 2nd floor' });
     const apptId = soon.body.data.appointments[0].id;
     await w.admin.c.post(`/api/admin/enquiries/${id}/appointments`, { startsAt: inHours(60), mode: 'phone' });
 

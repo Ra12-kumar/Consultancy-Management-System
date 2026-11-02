@@ -1,5 +1,6 @@
 "use client";
 
+import SocialLinks from "./SocialLinks";
 import type { ReactNode } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Feedback";
@@ -8,7 +9,7 @@ import { SafeMarkdown } from "@/lib/markdown";
 import { apiGet } from "@/services/api";
 
 export type Page = { slug: string; title: string; intro: string; body: string; faqs: Array<{ question: string; answer: string }>; updatedAt: string | null };
-export type SiteInfo = { organisation: { name: string; supportEmail: string; supportPhone: string; whatsapp: string; address: string; officeHours: string }; banners: Array<{ id: string; title: string; body: string }>; payments: { enabled: boolean } };
+export type SiteInfo = { organisation: { name: string; supportEmail: string; supportPhone: string; whatsapp: string; address: string; officeHours: string; instagram?: string; facebook?: string }; banners: Array<{ id: string; title: string; body: string }>; payments: { enabled: boolean } };
 
 type Fallback = { eyebrow: string; title: string; intro: string; points: string[] };
 
@@ -73,8 +74,9 @@ export default function ContentPage({ slug, fallback, children }: { slug: string
 export function ContactDetails() {
   const site = useApiData((signal) => apiGet<SiteInfo>("/site", { signal }), []);
   const o = site.data?.organisation;
-  if (!o || !(o.supportPhone || o.supportEmail || o.address || o.whatsapp)) return null;
+  if (!o || !(o.supportPhone || o.supportEmail || o.address || o.whatsapp || o.instagram || o.facebook)) return null;
   return (
+    <>
     <dl className="mt-8 grid gap-3 rounded-2xl border border-line bg-surface p-5 text-sm sm:grid-cols-2">
       {o.supportPhone && (
         <div>
@@ -119,6 +121,8 @@ export function ContactDetails() {
         </div>
       )}
     </dl>
+    <SocialLinks />
+    </>
   );
 }
 

@@ -5,7 +5,9 @@ import { buildOpenApi } from '../services/openapi.js';
 import { adminRouter } from './admin.routes.js';
 import { authRouter } from './auth.routes.js';
 import { catalogRouter } from './catalog.routes.js';
+import { counsellorRouter } from './counsellor.routes.js';
 import { admissionRouter, appointmentRouter, enquiryRouter } from './enquiry.routes.js';
+import { leadRouter } from './lead.routes.js';
 import { scholarshipApplicationRouter, scholarshipRouter } from './scholarship.routes.js';
 import { mfaRouter, pagesRouter, paymentRouter, siteRouter } from './stage7.routes.js';
 import { enquiryDocumentRouter, feedbackRouter, filesRouter, testimonialsRouter } from './support.routes.js';
@@ -24,6 +26,8 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/auth', mfaRouter);
 apiRouter.use('/students', studentRouter);
 apiRouter.use('/admin', adminRouter);
+// Counsellors: only the enquiries assigned to them.
+apiRouter.use('/counsellor', counsellorRouter);
 // Students' own enquiries, college applications and counselling appointments.
 apiRouter.use('/enquiries', enquiryRouter);
 apiRouter.use('/enquiries', enquiryDocumentRouter);
@@ -40,6 +44,8 @@ apiRouter.use('/testimonials', testimonialsRouter);
 apiRouter.use('/site', siteRouter);
 apiRouter.use('/pages', pagesRouter);
 apiRouter.use('/payments', paymentRouter);
+// Public callback requests from the landing page (no account; rate limited).
+apiRouter.use('/leads', leadRouter);
 
 // Public, read-only catalogue: /locations, /courses, /colleges, /colleges/compare, /colleges/:slug.
 apiRouter.use(catalogRouter);
@@ -51,8 +57,10 @@ const MOUNTS = new Map<unknown, string>([
   [siteRouter, '/site'],
   [pagesRouter, '/pages'],
   [paymentRouter, '/payments'],
+  [leadRouter, '/leads'],
   [studentRouter, '/students'],
   [adminRouter, '/admin'],
+  [counsellorRouter, '/counsellor'],
   [enquiryRouter, '/enquiries'],
   [enquiryDocumentRouter, '/enquiries'],
   [admissionRouter, '/admissions'],

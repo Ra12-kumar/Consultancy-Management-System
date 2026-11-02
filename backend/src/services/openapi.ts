@@ -1,23 +1,23 @@
 import type { Router } from 'express';
-import type { ZodTypeAny } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z, type ZodType } from 'zod';
 import { env } from '../config/env.js';
 
 // Builds the OpenAPI document from the real routers, so the docs cannot drift from the code: paths and methods come
 // from the route table, request schemas from the zod validators, and access rules from the auth middleware.
 
-type Meta = { schemas?: { body?: ZodTypeAny; query?: ZodTypeAny; params?: ZodTypeAny }; roles?: string[]; permissions?: string[]; all?: boolean; auth?: boolean; verified?: boolean };
+type Meta = { schemas?: { body?: ZodType; query?: ZodType; params?: ZodType }; roles?: string[]; permissions?: string[]; all?: boolean; auth?: boolean; verified?: boolean };
 type Layer = { route?: { path: string; methods: Record<string, boolean>; stack: Array<{ handle: { openapi?: Meta } }> }; handle: { stack?: Layer[]; openapi?: Meta } };
 type Operation = Record<string, unknown>;
 
-const json = (schema: ZodTypeAny) => {
-  // Request input as clients send it (before defaults/transforms are applied).
-  const s = zodToJsonSchema(schema, { target: 'openApi3', $refStrategy: 'none', effectStrategy: 'input' }) as Record<string, unknown>;
+const json = (schema: ZodType) => {
+  // Request input as clients send it (before defaults/transforms are applied). Parts JSON Schema cannot express
+  // (custom checks) are documented as "any"; the server still enforces them.
+  const s = z.toJSONSchema(schema, { target: 'openapi-3.0', io: 'input', unrepresentable: 'any' }) as Record<string, unknown>;
   delete s.$schema;
   return s;
 };
 
-function parameters(schema: ZodTypeAny | undefined, where: 'path' | 'query') {
+function parameters(schema: ZodType | undefined, where: 'path' | 'query') {
   if (!schema) return [];
   const s = json(schema) as { properties?: Record<string, unknown>; required?: string[] };
   return Object.entries(s.properties ?? {}).map(([name, prop]) => ({ name, in: where, required: where === 'path' || (s.required ?? []).includes(name), schema: prop }));
@@ -76,7 +76,7 @@ export function buildOpenApi(root: Router, prefix: string, mounts: Map<unknown, 
       title: `${env.APP_NAME} API`,
       version: '1.0.0',
       description:
-        'Generated from the live route table and validators. All responses use `{ success, data, meta? }` or `{ success: false, error: { code, message, details? } }`. Money is integer paise. Cookie-authenticated writes must send an allowed Origin header (CSRF protection).',
+        'Generated from the live route table and validators. All responses use `{ success, data, meta? }` or `{ success: false, error: { code, message, details? }, requestId }` (requestId matches the X-Request-Id header and the server log). Money is integer paise. Cookie-authenticated writes must send an allowed Origin header (CSRF protection).',
     },
     servers: [{ url: '/' }],
     components: {
@@ -85,7 +85,7 @@ export function buildOpenApi(root: Router, prefix: string, mounts: Map<unknown, 
         Success: { description: 'OK', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean', enum: [true] }, data: {}, meta: { type: 'object' } } } } } },
         Error: {
           description: 'Error',
-          content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean', enum: [false] }, error: { type: 'object', properties: { code: { type: 'string' }, message: { type: 'string' }, details: { type: 'array', items: { type: 'object', properties: { field: { type: 'string' }, message: { type: 'string' } } } } } } } } } },
+          content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean', enum: [false] }, error: { type: 'object', properties: { code: { type: 'string' }, message: { type: 'string' }, details: { type: 'array', items: { type: 'object', properties: { field: { type: 'string' }, message: { type: 'string' } } } } } }, requestId: { type: 'string' } } } } },
         },
       },
     },

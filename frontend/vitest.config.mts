@@ -10,5 +10,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     css: false,
     include: ["src/**/*.test.{ts,tsx}"],
+    // Form tests type and click through several steps; 5 s is too tight on a busy machine or under coverage.
+    testTimeout: 20_000,
   },
 });

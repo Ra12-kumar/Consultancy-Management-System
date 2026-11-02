@@ -1,0 +1,9 @@
+# Everything for the Udaan education consultancy system lives in its own namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: education-consultancy
+  labels:
+    app.kubernetes.io/part-of: education-consultancy
+    # Pods must meet the "restricted" Pod Security Standard (non-root, no privilege escalation, etc.).
+    pod-security.kubernetes.io/enforce: restricted

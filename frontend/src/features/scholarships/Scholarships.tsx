@@ -16,7 +16,7 @@ import type { ApiError, PageMeta } from "@/types/api";
 import type { Course } from "@/types/catalog";
 import type { Benefit, EligibilityReport, EligibilityResult, Reason, Scholarship, ScholarshipApplication } from "@/types/scholarship";
 
-export const PROVIDERS = { college: "College scholarship", consultancy: "EduPath offer", government: "Government scheme" } as const;
+export const PROVIDERS = { college: "College scholarship", consultancy: "Udaan offer", government: "Government scheme" } as const;
 export const CATEGORY_LABELS: Record<string, string> = { general: "General", obc: "OBC", sc: "SC", st: "ST", ews: "EWS" };
 const RESULT: Record<EligibilityResult, { label: string; tone: "success" | "danger" | "warning" }> = {
   likely_eligible: { label: "Likely eligible", tone: "success" },
@@ -28,7 +28,7 @@ const APP_TONE: Record<string, "success" | "danger" | "warning" | "neutral" | "g
 export function benefitText(b: Benefit) {
   if (b.description) return b.description;
   if (b.type === "tuition_percent") return `${b.value}% of tuition${b.maxMinor ? ` (up to ${formatINR(b.maxMinor)})` : ""}`;
-  if (b.type === "service_charge_percent") return `${b.value}% off the EduPath service charge`;
+  if (b.type === "service_charge_percent") return `${b.value}% off the Udaan service charge`;
   if (b.type === "fixed_amount") return `${formatINR(b.value)}`;
   return "See details";
 }

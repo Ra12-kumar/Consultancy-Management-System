@@ -10,13 +10,26 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { SampleBadge } from "@/features/catalog/CatalogUi";
 import { LoadState, PageTitle, Pager, fmtDate } from "@/features/admin/shared";
 import { useApiData } from "@/hooks/useApiData";
-import { COLLEGE_TYPES, COURSE_LEVELS, durationLabel, formatLakh, slugify } from "@/lib/format";
+import { CATEGORIES, COLLEGE_TYPES, COURSE_LEVELS, OWNERSHIP, durationLabel, formatLakh, slugify } from "@/lib/format";
 import { api, apiGet, apiPatch, apiPost, apiDelete, fieldErrors } from "@/services/api";
 import type { PageMeta } from "@/types/api";
 import type { Accreditation, AdminCollege, AdminOffering, Course, Location } from "@/types/catalog";
+import CollegeGallery from "./CollegeGallery";
+import MediaUpload from "./MediaUpload";
 import { OfferingFees } from "./FeeEditor";
 
-const STATUS_TONE = { draft: "gold", published: "success", archived: "neutral" } as const;
+const STATUS_TONE = { draft: "gold", published: "success", archived: "neutral", needs_review: "warning" } as const;
+// Students see only Active (published) colleges.
+export const STATUS_LABEL = { draft: "Draft", published: "Active", archived: "Inactive", needs_review: "Needs review" } as const;
+export const MODE_LABEL = { offline: "Offline (on campus)", online: "Online", hybrid: "Hybrid" } as const;
+const QUALIFICATION_LABEL: Record<string, string> = { class_10: "Class 10", class_12: "Class 12", diploma: "Diploma", undergraduate: "Undergraduate degree", postgraduate: "Postgraduate degree", other: "Other" };
+const SOCIAL: Array<["instagram" | "facebook" | "youtube" | "linkedin" | "x", string]> = [
+  ["instagram", "Instagram"],
+  ["facebook", "Facebook"],
+  ["youtube", "YouTube"],
+  ["linkedin", "LinkedIn"],
+  ["x", "X (Twitter)"],
+];
 const errMsg = (e: unknown) => (e as { message?: string }).message ?? "Something went wrong";
 
 function usePermission(p: string) {
@@ -56,7 +69,16 @@ export function AdminColleges() {
       <PageTitle
         title="Colleges"
         subtitle="Create colleges as drafts, add their courses and fees, and publish when the details are verified."
-        action={canEdit && !create.open ? <Button onClick={() => setCreate({ ...create, open: true })}>Add college</Button> : undefined}
+        action={
+          canEdit ? (
+            <span className="flex flex-wrap gap-2">
+              <ButtonLink href="/admin/colleges/featured" variant="secondary">
+                Featured colleges
+              </ButtonLink>
+              {!create.open && <Button onClick={() => setCreate({ ...create, open: true })}>Add college</Button>}
+            </span>
+          ) : undefined
+        }
       />
       {create.open && (
         <Card className="mb-6">
@@ -91,8 +113,8 @@ export function AdminColleges() {
         <select aria-label="Status" className="min-h-11 rounded-xl border border-line bg-surface px-3 text-sm" value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}>
           <option value="">All statuses</option>
           <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
+          <option value="published">Active (published)</option>
+          <option value="archived">Inactive</option>
         </select>
         <select aria-label="Sample data" className="min-h-11 rounded-xl border border-line bg-surface px-3 text-sm" value={filters.sample} onChange={(e) => setFilters({ ...filters, sample: e.target.value, page: 1 })}>
           <option value="">Real and sample</option>
@@ -123,7 +145,7 @@ export function AdminColleges() {
                     </div>
                   )}
                 </div>
-                <Badge tone={STATUS_TONE[c.status]}>{c.status}</Badge>
+                <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge>
                 <span className="text-xs text-muted">Updated {fmtDate(c.updatedAt)}</span>
               </li>
             ))}
@@ -137,7 +159,15 @@ export function AdminColleges() {
 
 // ---- College editor: Profile, Courses, Fees ----
 
-type ProfileForm = Omit<AdminCollege, "id" | "status" | "city" | "state" | "isSample" | "feeSummary" | "updatedAt" | "offerings" | "approvals"> & { approvals: string };
+type ProfileForm = Omit<AdminCollege, "id" | "status" | "city" | "state" | "isSample" | "feeSummary" | "updatedAt" | "offerings" | "approvals" | "aliases" | "yearEstablished" | "listingLevel" | "source" | "lockedFields" | "images" | "entranceExams" | "facilities" | "highlights" | "admissionDeadline"> & {
+  approvals: string;
+  aliases: string;
+  yearEstablished: string;
+  entranceExams: string;
+  facilities: string;
+  highlights: string;
+  admissionDeadline: string;
+};
 
 const toProfileForm = (c: AdminCollege): ProfileForm => ({
   name: c.name,
@@ -159,9 +189,31 @@ const toProfileForm = (c: AdminCollege): ProfileForm => ({
   featured: c.featured,
   lastVerifiedAt: c.lastVerifiedAt ? c.lastVerifiedAt.slice(0, 10) : null,
   verificationSource: c.verificationSource,
+  aisheCode: c.aisheCode ?? null,
+  ownership: c.ownership ?? null,
+  category: c.category ?? null,
+  subtype: c.subtype ?? "",
+  district: c.district ?? "",
+  postalCode: c.postalCode ?? "",
+  yearEstablished: c.yearEstablished ? String(c.yearEstablished) : "",
+  affiliatedUniversity: { name: c.affiliatedUniversity?.name ?? "", type: c.affiliatedUniversity?.type ?? "" },
+  aliases: (c.aliases ?? []).join(", "),
+  hostelAvailable: c.hostelAvailable ?? null,
+  applicationUrl: c.applicationUrl ?? "",
+  eligibility: c.eligibility ?? "",
+  entranceExams: (c.entranceExams ?? []).join(", "),
+  facilities: (c.facilities ?? []).join(", "),
+  highlights: (c.highlights ?? []).join("\n"),
+  academicSession: c.academicSession ?? "",
+  admissionDeadline: c.admissionDeadline ? c.admissionDeadline.slice(0, 10) : "",
+  social: { instagram: c.social?.instagram ?? "", facebook: c.social?.facebook ?? "", youtube: c.social?.youtube ?? "", linkedin: c.social?.linkedin ?? "", x: c.social?.x ?? "" },
+  admissionInfo: c.admissionInfo ?? "",
 });
 
+const list = (s: string, sep: string | RegExp = ",") => s.split(sep).map((x) => x.trim()).filter(Boolean);
+
 function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminCollege; cities: Location[]; canEdit: boolean; onSaved: () => void }) {
+  const router = useRouter();
   const [form, setForm] = useState(() => toProfileForm(college));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<{ busy: boolean; tone?: "error" | "success"; message?: string }>({ busy: false });
@@ -173,7 +225,22 @@ function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminColle
     setStatus({ busy: true });
     setErrors({});
     try {
-      const body = { ...form, approvals: form.approvals.split(",").map((s) => s.trim()).filter(Boolean), lastVerifiedAt: form.lastVerifiedAt || null, accreditations: form.accreditations.map((a) => ({ ...a, validUntil: a.validUntil || null })) };
+      // An uploaded logo is managed under "Logo & brochure"; its address is not edited here.
+      const { logoUrl, ...fields } = form;
+      const body = {
+        ...fields,
+        ...(!college.logoFile && { logoUrl }),
+        approvals: form.approvals.split(",").map((s) => s.trim()).filter(Boolean),
+        aliases: form.aliases.split(",").map((s) => s.trim()).filter(Boolean),
+        aisheCode: form.aisheCode?.trim() || null,
+        yearEstablished: /^\d{4}$/.test(form.yearEstablished.trim()) ? Number(form.yearEstablished.trim()) : null,
+        lastVerifiedAt: form.lastVerifiedAt || null,
+        accreditations: form.accreditations.map((a) => ({ ...a, validUntil: a.validUntil || null })),
+        entranceExams: list(form.entranceExams),
+        facilities: list(form.facilities),
+        highlights: list(form.highlights, /\n/),
+        admissionDeadline: form.admissionDeadline ? `${form.admissionDeadline}T23:59:59+05:30` : null,
+      };
       await apiPatch(`/admin/colleges/${college.id}`, body);
       onSaved();
       setStatus({ busy: false, tone: "success", message: "Saved." });
@@ -183,20 +250,38 @@ function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminColle
     }
   }
   async function changeStatus(action: "publish" | "archive" | "restore") {
-    if (action !== "restore" && !window.confirm(action === "publish" ? "Publish this college? It will appear in the public directory." : "Archive this college? It will be removed from the public directory.")) return;
+    if (action !== "restore" && !window.confirm(action === "publish" ? "Publish this college? It becomes Active and appears to students." : "Unpublish this college? It becomes Inactive and students will no longer see it.")) return;
     setStatus({ busy: true });
     try {
       await apiPost(`/admin/colleges/${college.id}/${action}`);
       onSaved();
-      setStatus({ busy: false, tone: "success", message: { publish: "Published.", archive: "Archived.", restore: "Moved back to draft." }[action] });
+      setStatus({ busy: false, tone: "success", message: { publish: "Published: the college is now Active.", archive: "Unpublished: the college is now Inactive.", restore: "Moved back to draft." }[action] });
     } catch (err) {
       setErrors(fieldErrors(err));
       setStatus({ busy: false, tone: "error", message: errMsg(err) });
     }
   }
 
+  async function remove() {
+    if (!window.confirm(`Delete ${college.name} permanently, with its courses, fees and files? This cannot be undone.`)) return;
+    setStatus({ busy: true });
+    try {
+      await apiDelete(`/admin/colleges/${college.id}`);
+      router.push("/admin/colleges");
+    } catch (err) {
+      setStatus({ busy: false, tone: "error", message: errMsg(err) });
+    }
+  }
+
   return (
     <form onSubmit={save} className="space-y-6" noValidate>
+      {college.source?.name && (
+        <Alert tone="info" title={`Imported from ${college.source.name}`}>
+          {college.listingLevel === "basic" ? "Basic listing: add courses and verified fees to make it a detailed listing. " : ""}
+          Last updated from the source {fmtDate(college.source.lastSyncedAt ?? null)}. Fields you change here are kept on later imports
+          {college.lockedFields?.length ? ` (currently kept: ${college.lockedFields.join(", ")})` : ""}; differences are sent to the review queue under College data.
+        </Alert>
+      )}
       <fieldset disabled={!canEdit} className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField label="Name" required value={form.name} onChange={(e) => set({ name: e.target.value })} error={errors.name} maxLength={160} />
@@ -216,9 +301,37 @@ function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminColle
               </option>
             ))}
           </SelectField>
+          <SelectField label="Institution" value={form.category ?? ""} onChange={(e) => set({ category: (e.target.value || null) as ProfileForm["category"] })}>
+            <option value="">Not set</option>
+            {Object.entries(CATEGORIES).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField label="Ownership" value={form.ownership ?? ""} onChange={(e) => set({ ownership: (e.target.value || null) as ProfileForm["ownership"] })}>
+            <option value="">Not set</option>
+            {Object.entries(OWNERSHIP).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </SelectField>
+          <TextField label="AISHE code" value={form.aisheCode ?? ""} onChange={(e) => set({ aisheCode: e.target.value })} error={errors.aisheCode} hint="e.g. C-12345, U-0123 or S-4567" maxLength={10} />
+          <TextField label="Sub-type" value={form.subtype} onChange={(e) => set({ subtype: e.target.value })} maxLength={80} hint="e.g. Affiliated college, State public university" />
+          <TextField label="District" value={form.district} onChange={(e) => set({ district: e.target.value })} maxLength={80} />
+          <TextField label="PIN code" inputMode="numeric" value={form.postalCode} onChange={(e) => set({ postalCode: e.target.value })} error={errors.postalCode} maxLength={6} />
+          <TextField label="Year established" inputMode="numeric" value={form.yearEstablished} onChange={(e) => set({ yearEstablished: e.target.value })} error={errors.yearEstablished} maxLength={4} />
+          <TextField label="Affiliated university" value={form.affiliatedUniversity.name} onChange={(e) => set({ affiliatedUniversity: { ...form.affiliatedUniversity, name: e.target.value } })} maxLength={160} />
+          <TextField label="Other names (comma separated)" value={form.aliases} onChange={(e) => set({ aliases: e.target.value })} hint="Former or short names students may search for" />
+          <SelectField label="Hostel" value={form.hostelAvailable == null ? "" : form.hostelAvailable ? "yes" : "no"} onChange={(e) => set({ hostelAvailable: e.target.value === "" ? null : e.target.value === "yes" })}>
+            <option value="">Not known</option>
+            <option value="yes">Available</option>
+            <option value="no">Not available</option>
+          </SelectField>
           <TextField label="Address" value={form.address} onChange={(e) => set({ address: e.target.value })} maxLength={300} />
           <TextField label="Official website (https://)" value={form.website} onChange={(e) => set({ website: e.target.value })} error={errors.website} />
-          <TextField label="Logo image URL (https://)" value={form.logoUrl} onChange={(e) => set({ logoUrl: e.target.value })} error={errors.logoUrl} hint="Use only images you are licensed to use" />
+          <TextField label="Logo image URL (https://)" value={college.logoFile ? "" : form.logoUrl} disabled={Boolean(college.logoFile)} onChange={(e) => set({ logoUrl: e.target.value })} error={errors.logoUrl} hint={college.logoFile ? "An uploaded logo is in use (see Logo & brochure)" : "Or upload one under Logo & brochure. Use only images you are licensed to use"} />
           <TextField label="Cover image URL (https://)" value={form.coverUrl} onChange={(e) => set({ coverUrl: e.target.value })} error={errors.coverUrl} />
           <TextField label="Contact phone" value={form.contact.phone} onChange={(e) => set({ contact: { ...form.contact, phone: e.target.value } })} maxLength={30} />
           <TextField label="Contact email" type="email" value={form.contact.email} onChange={(e) => set({ contact: { ...form.contact, email: e.target.value } })} error={errors["contact.email"]} />
@@ -232,6 +345,27 @@ function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminColle
             <input type="checkbox" checked={form.placementVerified} onChange={(e) => set({ placementVerified: e.target.checked })} /> Placement information is verified from an official source
           </label>
         </div>
+        <fieldset className="space-y-4 rounded-2xl border border-line p-4">
+          <legend className="px-1 text-sm font-semibold">Admission details (from official sources only)</legend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Application / admission URL (https://)" value={form.applicationUrl ?? ""} onChange={(e) => set({ applicationUrl: e.target.value })} error={errors.applicationUrl} hint="Only a link you have checked on the college's official site" />
+            <TextField label="Academic session" placeholder="2026-27" value={form.academicSession ?? ""} onChange={(e) => set({ academicSession: e.target.value })} error={errors.academicSession} maxLength={9} />
+            <TextField label="Admission deadline" type="date" value={form.admissionDeadline} onChange={(e) => set({ admissionDeadline: e.target.value })} error={errors.admissionDeadline} />
+            <TextField label="Entrance exams (comma separated)" placeholder="JEE Main, CUET" value={form.entranceExams} onChange={(e) => set({ entranceExams: e.target.value })} error={errors.entranceExams} />
+            <TextField label="Facilities (comma separated)" placeholder="Hostel, Library, Labs, Sports" value={form.facilities} onChange={(e) => set({ facilities: e.target.value })} error={errors.facilities} />
+          </div>
+          <TextAreaField label="Eligibility" value={form.eligibility ?? ""} onChange={(e) => set({ eligibility: e.target.value })} maxLength={2000} error={errors.eligibility} />
+          <TextAreaField label="Highlights (one per line)" value={form.highlights} onChange={(e) => set({ highlights: e.target.value })} error={errors.highlights} hint="Short verified facts, e.g. NAAC A++ (2024)" />
+        </fieldset>
+        <TextAreaField label="Admission information" value={form.admissionInfo ?? ""} onChange={(e) => set({ admissionInfo: e.target.value })} maxLength={4000} error={errors.admissionInfo} hint="Dates, documents, counselling rounds and other admission notes for students" />
+        <fieldset className="space-y-4 rounded-2xl border border-line p-4">
+          <legend className="px-1 text-sm font-semibold">Official social media pages</legend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {SOCIAL.map(([key, name]) => (
+              <TextField key={key} label={`${name} (https://)`} value={form.social?.[key] ?? ""} onChange={(e) => set({ social: { ...form.social!, [key]: e.target.value } })} error={errors[`social.${key}`]} />
+            ))}
+          </div>
+        </fieldset>
         <TextField label="Approvals (comma separated)" value={form.approvals} onChange={(e) => set({ approvals: e.target.value })} hint="e.g. AICTE, UGC – only approvals you have verified" />
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold">Accreditation (verified only)</legend>
@@ -266,12 +400,17 @@ function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminColle
           </Button>
           {college.status !== "published" && (
             <Button variant="gold" disabled={status.busy} onClick={() => changeStatus("publish")}>
-              Publish
+              Publish (make Active)
             </Button>
           )}
           {college.status !== "archived" && (
             <Button variant="ghost" disabled={status.busy} onClick={() => changeStatus("archive")}>
-              Archive
+              {college.status === "published" ? "Unpublish (make Inactive)" : "Mark Inactive"}
+            </Button>
+          )}
+          {college.status !== "published" && (
+            <Button variant="ghost" disabled={status.busy} onClick={remove}>
+              Delete
             </Button>
           )}
           {college.status === "archived" && (
@@ -285,7 +424,7 @@ function ProfileTab({ college, cities, canEdit, onSaved }: { college: AdminColle
   );
 }
 
-const emptyOffering = { course: "", specialization: "", durationMonths: "", minPercentage: "", seats: "", eligibilityText: "", entranceExams: "", applicationDeadline: "", admissionProcess: "" };
+const emptyOffering = { course: "", specialization: "", durationMonths: "", minPercentage: "", seats: "", eligibilityText: "", entranceExams: "", applicationDeadline: "", admissionProcess: "", description: "", mode: "offline", minQualification: "" };
 
 function OfferingForm({ collegeId, courses, offering, onDone }: { collegeId: string; courses: Course[]; offering?: AdminOffering; onDone: () => void }) {
   const [f, setF] = useState(
@@ -300,6 +439,9 @@ function OfferingForm({ collegeId, courses, offering, onDone }: { collegeId: str
           entranceExams: offering.entranceExams.join(", "),
           applicationDeadline: offering.applicationDeadline?.slice(0, 10) ?? "",
           admissionProcess: offering.admissionProcess,
+          description: offering.description ?? "",
+          mode: offering.mode ?? "offline",
+          minQualification: offering.minQualification ?? "",
         }
       : emptyOffering,
   );
@@ -320,6 +462,9 @@ function OfferingForm({ collegeId, courses, offering, onDone }: { collegeId: str
       entranceExams: f.entranceExams.split(",").map((s) => s.trim()).filter(Boolean),
       applicationDeadline: f.applicationDeadline || null,
       admissionProcess: f.admissionProcess.trim(),
+      description: f.description.trim(),
+      mode: f.mode,
+      minQualification: f.minQualification || null,
     };
     try {
       if (offering) await apiPatch(`/admin/offerings/${offering.id}`, body);
@@ -357,6 +502,24 @@ function OfferingForm({ collegeId, courses, offering, onDone }: { collegeId: str
       <TextField label="Application deadline" type="date" value={f.applicationDeadline} onChange={(e) => setF({ ...f, applicationDeadline: e.target.value })} />
       <TextField label="Entrance exams (comma separated)" value={f.entranceExams} onChange={(e) => setF({ ...f, entranceExams: e.target.value })} />
       <TextField label="Eligibility" value={f.eligibilityText} onChange={(e) => setF({ ...f, eligibilityText: e.target.value })} maxLength={1000} />
+      <SelectField label="Course mode" value={f.mode} onChange={(e) => setF({ ...f, mode: e.target.value })} error={errors.mode}>
+        {Object.entries(MODE_LABEL).map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </SelectField>
+      <SelectField label="Minimum qualification" value={f.minQualification} onChange={(e) => setF({ ...f, minQualification: e.target.value })} error={errors.minQualification}>
+        <option value="">Not stated</option>
+        {Object.entries(QUALIFICATION_LABEL).map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
+      </SelectField>
+      <div className="sm:col-span-2">
+        <TextAreaField label="Course description" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} maxLength={2000} error={errors.description} />
+      </div>
       <div className="sm:col-span-2">
         <TextAreaField label="Admission process for this course" value={f.admissionProcess} onChange={(e) => setF({ ...f, admissionProcess: e.target.value })} maxLength={2000} />
       </div>
@@ -416,6 +579,12 @@ function CoursesTab({ college, courses, canEdit, reload }: { college: AdminColle
               reload();
             }}
           />
+          {editing !== "new" && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <MediaUpload label="Course picture" kind="image" path={`/admin/offerings/${editing.id}/image`} url={editing.imageUrl} canEdit={canEdit} onChange={reload} />
+              <MediaUpload label="Course brochure" kind="pdf" path={`/admin/offerings/${editing.id}/brochure`} url={editing.brochureUrl} canEdit={canEdit} onChange={reload} />
+            </div>
+          )}
         </Card>
       )}
       {offerings.length === 0 ? (
@@ -433,6 +602,7 @@ function CoursesTab({ college, courses, canEdit, reload }: { college: AdminColle
                   {durationLabel(o.durationMonths)}
                   {o.minPercentage != null && ` · min ${o.minPercentage}%`}
                   {o.entranceExams.length > 0 && ` · ${o.entranceExams.join(", ")}`}
+                  {` · ${MODE_LABEL[o.mode ?? "offline"]}`}
                 </p>
               </div>
               <Badge tone={o.status === "active" ? "success" : "neutral"}>{o.status}</Badge>
@@ -465,7 +635,7 @@ export function AdminCollegeEditor() {
     const [college, locations, courses] = await Promise.all([apiGet<AdminCollege>(`/admin/colleges/${id}`, { signal }), apiGet<Location[]>("/locations", { signal }), apiGet<Course[]>("/courses", { signal })]);
     return { college, locations, courses };
   }, [id]);
-  const [tab, setTab] = useState<"profile" | "courses" | "fees">(canCatalog ? "profile" : "fees");
+  const [tab, setTab] = useState<"profile" | "media" | "photos" | "courses" | "fees">(canCatalog ? "profile" : "fees");
   const [offeringId, setOfferingId] = useState("");
 
   if (!data.data) return <LoadState status={data.status} error={data.error} reload={data.reload} rows={5} />;
@@ -475,6 +645,7 @@ export function AdminCollegeEditor() {
   const selected = offerings.find((o) => o.id === offeringId) ?? offerings[0];
   const tabs = [
     ["profile", "Profile"],
+    ...(canCatalog ? [["media", "Logo & brochure"], ["photos", "Photos"]] : []),
     ["courses", "Courses"],
     ...(canPricing ? [["fees", "Fees"]] : []),
   ] as Array<[typeof tab, string]>;
@@ -491,7 +662,7 @@ export function AdminCollegeEditor() {
         subtitle={[college.city, college.state].filter(Boolean).join(", ") || "No city yet"}
         action={
           <span className="flex items-center gap-2">
-            <Badge tone={STATUS_TONE[college.status]}>{college.status}</Badge>
+            <Badge tone={STATUS_TONE[college.status]}>{STATUS_LABEL[college.status]}</Badge>
             {college.status === "published" && (
               <ButtonLink href={`/colleges/${college.slug}`} size="sm" variant="secondary" target="_blank">
                 View public page
@@ -515,6 +686,13 @@ export function AdminCollegeEditor() {
         ))}
       </div>
       {tab === "profile" && <ProfileTab key={college.id} college={college} cities={cities} canEdit={canCatalog} onSaved={data.reload} />}
+      {tab === "media" && canCatalog && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <MediaUpload label="College logo" kind="image" path={`/admin/colleges/${college.id}/logo`} url={college.logoFile ? college.logoUrl : null} canEdit={canCatalog} onChange={data.reload} />
+          <MediaUpload label="College brochure" kind="pdf" path={`/admin/colleges/${college.id}/brochure`} url={college.brochureUrl} canEdit={canCatalog} onChange={data.reload} />
+        </div>
+      )}
+      {tab === "photos" && canCatalog && <CollegeGallery key={college.id} collegeId={college.id} initial={college.images ?? []} canEdit={canCatalog} />}
       {tab === "courses" && <CoursesTab college={college} courses={data.data.courses} canEdit={canCatalog} reload={data.reload} />}
       {tab === "fees" &&
         canPricing &&

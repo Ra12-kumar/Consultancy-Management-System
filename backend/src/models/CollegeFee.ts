@@ -53,6 +53,11 @@ const collegeFeeSchema = new mongoose.Schema(
     // Derived by the server (services/feeCalculator.ts) on every save; used for budget search.
     durationMonths: { type: Number, required: true, min: 1, max: 120 },
     officialTotalMinor: { type: Number, required: true, min: 0 },
+    // Recurring official fees per year; null when only one-time/whole-course amounts are published (not comparable per year).
+    annualOfficialMinor: { type: Number, min: 0, default: null },
+    hostelAnnualMinor: { type: Number, min: 0, default: null },
+    // Whole course: official after discount + optional (hostel/transport) + consultancy charge.
+    overallEstimateMinor: { type: Number, min: 0, default: null },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     publishedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     publishedAt: { type: Date, default: null },
@@ -62,6 +67,7 @@ const collegeFeeSchema = new mongoose.Schema(
 collegeFeeSchema.index({ collegeCourse: 1, academicYear: 1, intake: 1 }, { unique: true, partialFilterExpression: { status: 'published' }, name: 'fee_one_published' });
 collegeFeeSchema.index({ collegeCourse: 1, academicYear: -1, version: -1 }, { name: 'fee_history' });
 collegeFeeSchema.index({ status: 1, course: 1, officialTotalMinor: 1 }, { name: 'fee_budget_search' });
+collegeFeeSchema.index({ status: 1, course: 1, annualOfficialMinor: 1 }, { name: 'fee_budget_annual' });
 collegeFeeSchema.index({ college: 1, status: 1 }, { name: 'fee_by_college' });
 
 export type CollegeFee = InferSchemaType<typeof collegeFeeSchema>;

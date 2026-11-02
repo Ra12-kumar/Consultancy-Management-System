@@ -1,0 +1,45 @@
+# Least-privilege traffic inside the namespace:
+#  - only the ingress controller reaches web and api;
+#  - web may call api (server-side rendering);
+#  - only api reaches redis.
+# Outbound traffic (MongoDB Atlas, email provider, Wikidata) is not restricted here; add egress rules if your
+# cluster requires it. Needs a CNI that enforces NetworkPolicy (Calico, Cilium, most managed clusters).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-ingress
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: web } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } }
+      ports:
+        - { port: 3000 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-ingress
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: api } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } }
+        - podSelector: { matchLabels: { app.kubernetes.io/name: web } }
+      ports:
+        - { port: 5100 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-ingress
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: redis } }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: api } }
+      ports:
+        - { port: 6379 }

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// Sends visitors without a session cookie to the sign-in page before the student or admin areas load.
+// Sends visitors without a session cookie to the sign-in page before the student, counsellor or admin areas load.
 // This is only a convenience: the backend checks the session, role and permissions on every request.
 export function proxy(request: NextRequest) {
   if (request.cookies.has("ec_sid")) return NextResponse.next();
@@ -10,5 +10,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/student/:path*", "/admin/:path*"],
+  matcher: ["/student/:path*", "/admin/:path*", "/counsellor/:path*"],
 };

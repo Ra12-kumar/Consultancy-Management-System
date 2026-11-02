@@ -45,6 +45,18 @@ export const profileBody = z
         entranceExams: z.array(z.object({ name: z.string().trim().min(2).max(60), score: text(30), year: year.nullable().default(null) }).strict()).max(5).default([]),
       })
       .strict(),
+    // What the student wants to study and where (free text; used for college suggestions). Optional, so older
+    // clients that do not send it keep the saved preferences.
+    preferences: z.object({ course: text(120), location: text(120) }).strict().optional(),
+    // Percentages by stage, for eligibility checks. Optional, so older clients keep the saved marks.
+    marks: z
+      .object({
+        class10: z.object({ percentage: z.number().min(0).max(100).nullable().default(null), board: text(120), year: year.nullable().default(null) }).strict().prefault({}),
+        class12: z.object({ percentage: z.number().min(0).max(100).nullable().default(null), board: text(120), year: year.nullable().default(null), stream: text(60) }).strict().prefault({}),
+        graduation: z.object({ percentage: z.number().min(0).max(100).nullable().default(null), degree: text(120), year: year.nullable().default(null) }).strict().prefault({}),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type ProfileInput = z.infer<typeof profileBody>;

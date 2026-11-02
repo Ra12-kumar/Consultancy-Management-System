@@ -9,8 +9,10 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { useApiData } from "@/hooks/useApiData";
 import { api, apiGet, apiPatch, apiPost, fieldErrors } from "@/services/api";
 import type { ApiError, PageMeta, User } from "@/types/api";
-import { ADMIN_LABELS, StatusBadge } from "@/features/enquiry/shared";
-import type { EnquiryStatus } from "@/types/enquiry";
+import { ADMIN_LABELS, SOURCE_LABELS, StatusBadge } from "@/features/enquiry/shared";
+import type { EnquiryStatus, LeadSource } from "@/types/enquiry";
+import { BarList, DailyColumns } from "./Charts";
+import InviteCodes from "./InviteCodes";
 import { EmailStatusBadge, LoadState, PageTitle, Pager, fmtDate } from "./shared";
 
 const page = async <T,>(path: string, signal: AbortSignal) => {
@@ -21,11 +23,20 @@ const page = async <T,>(path: string, signal: AbortSignal) => {
 // ---- Dashboard ----
 
 type Summary = {
+  // Platform-wide totals (not affected by the filters).
+  totals?: { students: number; activeColleges: number; activeCourses: number; counsellors: number; enquiries: number; new: number; pending: number; converted: number; closed: number };
   students: { total: number; verified: number; unverified: number; newThisWeek: number };
   recentStudents: User[];
   email: Record<string, number> & { mode: "smtp" | "log-only" };
   catalog: { colleges: { published: number; draft: number; archived: number; sample: number }; offerings: number; fees: { draft: number; published: number } };
-  enquiries: { total: number; new: number; unassigned: number; open: number; followUpsDue: number };
+  enquiries: { total: number; new: number; unassigned: number; open: number; followUpsDue: number; pending: number; interested: number; followingUp: number; followUpsToday: number; followUpsOverdue: number; callbackRequests: number };
+  conversionRate: number;
+  charts: {
+    enquiriesByDay: Array<{ date: string; count: number }>;
+    byStatus: Array<{ status: EnquiryStatus; count: number }>;
+    topColleges: Array<{ id: string; name: string; count: number }>;
+    bySource: Array<{ source: LeadSource; count: number }>;
+  };
   applications: { inProgress: number; confirmedAdmissions: number };
   appointments: { next7Days: number };
   scholarships: { published: number; applications: { submitted: number; underReview: number; approved: number; rejected: number } };
@@ -62,11 +73,50 @@ export function AdminDashboard() {
   return (
     <div>
       <PageTitle title="Dashboard" subtitle="Enquiries, admissions, scholarships, students, colleges and email activity." />
+      <nav aria-label="Quick actions" className="mb-4 flex flex-wrap gap-2">
+        {[
+          ["Add a college", "/admin/colleges"],
+          ["Featured colleges", "/admin/colleges/featured"],
+          ["Manage enquiries", "/admin/enquiries"],
+          ["Today’s calls", "/admin/enquiries?quick=today"],
+          ["Callback requests", "/admin/enquiries?quick=callback"],
+          ["Appointments", "/admin/appointments"],
+          ["Counsellors", "/admin/counsellors"],
+          ["Enquiry reports", "/admin/enquiry-reports"],
+        ].map(([label, href]) => (
+          <Link key={href} href={href} className="inline-flex min-h-10 items-center rounded-xl border border-line bg-surface px-4 text-sm font-semibold hover:bg-surface-2">
+            {label}
+          </Link>
+        ))}
+      </nav>
       <DashboardFilters value={filters} onChange={setFilters} />
       {!s.data ? (
         <LoadState status={s.status} error={s.error} reload={s.reload} rows={4} />
       ) : (
         <div className="space-y-6">
+          {s.data.totals && (
+            <section aria-label="Platform totals">
+              <h2 className="mb-2 text-sm font-semibold text-muted">At a glance (all time)</h2>
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {([
+                  ["Students", s.data.totals.students],
+                  ["Active colleges", s.data.totals.activeColleges],
+                  ["Active courses", s.data.totals.activeCourses],
+                  ["Counsellors", s.data.totals.counsellors],
+                  ["Enquiries", s.data.totals.enquiries],
+                  ["New enquiries", s.data.totals.new],
+                  ["Pending", s.data.totals.pending],
+                  ["Converted", s.data.totals.converted],
+                  ["Closed", s.data.totals.closed],
+                ] as Array<[string, number]>).map(([label, value]) => (
+                  <div key={label} className="flex flex-col-reverse rounded-2xl border border-line bg-surface p-4">
+                    <dt className="text-xs text-muted">{label}</dt>
+                    <dd className="text-2xl font-bold tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[
               ["Registered students", s.data.students.total],
@@ -83,15 +133,20 @@ export function AdminDashboard() {
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {(
               [
+                ["Total enquiries", s.data.enquiries.total, "/admin/enquiries"],
+                ["New and pending", s.data.enquiries.pending, "/admin/enquiries?quick=new"],
+                ["Being followed up", s.data.enquiries.followingUp, "/admin/enquiries"],
+                ["Interested students", s.data.enquiries.interested, "/admin/enquiries?status=INTERESTED"],
+                ["Today’s follow-ups", s.data.enquiries.followUpsToday, "/admin/enquiries?quick=today"],
+                ["Overdue follow-ups", s.data.enquiries.followUpsOverdue, "/admin/enquiries?quick=overdue"],
+                ["Callback requests", s.data.enquiries.callbackRequests, "/admin/enquiries?quick=callback"],
                 ["Open enquiries", s.data.enquiries.open, "/admin/enquiries"],
-                ["New, not yet contacted", s.data.enquiries.new, "/admin/enquiries"],
-                ["Follow-ups due", s.data.enquiries.followUpsDue, "/admin/enquiries"],
                 ["Unassigned", s.data.enquiries.unassigned, "/admin/enquiries"],
                 ["Applications in progress", s.data.applications.inProgress, "/admin/admissions"],
                 // Confirmed with verified evidence only.
                 ["Confirmed admissions", s.data.applications.confirmedAdmissions, "/admin/admissions"],
                 ["Sessions in the next 7 days", s.data.appointments.next7Days, "/admin/appointments"],
-                ["Total enquiries", s.data.enquiries.total, "/admin/enquiries"],
+                ["Colleges listed", s.data.catalog.colleges.published, "/admin/colleges"],
                 ["Published scholarships", s.data.scholarships.published, "/admin/scholarships"],
                 ["Scholarship applications to review", s.data.scholarships.applications.submitted + s.data.scholarships.applications.underReview, "/admin/scholarship-applications"],
                 ["Scholarships approved", s.data.scholarships.applications.approved, "/admin/scholarship-applications"],
@@ -108,6 +163,23 @@ export function AdminDashboard() {
               </div>
             ))}
           </dl>
+          <p className="text-sm text-muted">
+            Conversion: <span className="font-semibold text-foreground">{s.data.conversionRate}%</span> of enquiries have an admission confirmed with evidence ({s.data.applications.confirmedAdmissions} of {s.data.enquiries.total}).
+          </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="lg:col-span-2">
+              <DailyColumns title="Enquiries over the last 30 days" days={s.data.charts.enquiriesByDay} />
+            </Card>
+            <Card>
+              <BarList title="Enquiries by status" rows={s.data.charts.byStatus.map((r) => ({ label: ADMIN_LABELS[r.status] ?? r.status, value: r.count, href: `/admin/enquiries?status=${r.status}` }))} />
+            </Card>
+            <Card>
+              <BarList title="Colleges with the most enquiries" rows={s.data.charts.topColleges.map((r) => ({ label: r.name, value: r.count }))} empty="No enquiries name a college yet." />
+            </Card>
+            <Card className="lg:col-span-2">
+              <BarList title="Where enquiries come from" rows={s.data.charts.bySource.map((r) => ({ label: SOURCE_LABELS[r.source] ?? r.source, value: r.count, href: `/admin/enquiries?source=${r.source}` }))} />
+            </Card>
+          </div>
           {s.data.recentEnquiries.length > 0 && (
             <Card>
               <h2 className="font-semibold">Latest enquiries</h2>
@@ -437,6 +509,7 @@ export function AdminTeam() {
           </Button>
         </form>
       </Card>
+      <InviteCodes renderPermissions={(value, onChange) => <PermissionPicker value={value} allowed={mine} onChange={onChange} />} />
       <Card>
         <h2 className="font-semibold">Current administrators</h2>
         {!admins.data ? (

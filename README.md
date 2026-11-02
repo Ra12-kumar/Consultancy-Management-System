@@ -2,7 +2,7 @@
 
 A web application for an Indian education consultancy.
 
-- **Students** explore colleges, courses and scholarships; compare published fees; submit admission enquiries with a reference number; and track enquiries, applications and counselling sessions.
+- **Students** search an all-India college directory (imported from official AISHE lists, with honest coverage and fee-verification labels) and explore colleges, courses and scholarships; compare published fees; submit admission enquiries with a reference number; and track enquiries, applications and counselling sessions.
 - **Students also** check their preliminary scholarship eligibility, upload requested documents, give feedback, and ask for their data to be corrected or deleted.
 - **Admins** manage the catalogue and fees, enquiries, admissions, appointments, scholarships, feedback and testimonials, and personal data requests. They can also see reports, export data and read the audit log, each with least-privilege permissions.
 
@@ -36,7 +36,7 @@ Open http://localhost:3000. API documentation (generated from the code) is at ht
 | Lint / type checks / production builds | `npm run lint` / `npm run typecheck` / `npm run build` |
 | Database connection check | `npm run db:check` |
 | Sample data: add / remove | `npm run seed:catalog` / `npm run seed:remove-samples` |
-| Upgrade an older database (explicit, once each, in order) | `npm run migrate:stage2`, `migrate:stage3`, `migrate:stage5`, `migrate:stage7` |
+| Upgrade an older database (explicit, once each, in order) | `npm run migrate:stage2`, `migrate:stage3`, `migrate:stage5`, `migrate:stage7`, `migrate:directory` |
 | Rebuild derived college data | `npm run catalog:rebuild` |
 
 No command drops or resets a database. Each migration runs only when you call it. The e2e tests empty only their own `education_consultancy_e2e` database, and refuse to run against any other.
@@ -47,4 +47,5 @@ Continuous integration (`.github/workflows/ci.yml`) runs lint, type checks, all 
 - `docs/setup.md`: local setup, Brevo email, first admin.
 - `docs/deployment.md`: Docker, HTTPS, production settings, backups.
 - `docs/architecture.md`, `docs/api.md`, `docs/security.md`, `database/README.md`.
+- `docs/college-directory.md`: the college directory: data sources (AISHE), imports, coverage and known gaps.
 - `docs/acceptance.md`: the spec's acceptance criteria and how each was verified.

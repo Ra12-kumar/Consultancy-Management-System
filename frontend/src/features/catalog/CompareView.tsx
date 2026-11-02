@@ -7,7 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Alert, Badge, EmptyState, Skeleton } from "@/components/ui/Feedback";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useApiData } from "@/hooks/useApiData";
-import { COLLEGE_TYPES, durationLabel, fmtDay, formatINR } from "@/lib/format";
+import { CATEGORIES, COLLEGE_TYPES, OWNERSHIP, durationLabel, fmtDay, formatINR } from "@/lib/format";
 import { apiGet, apiPost } from "@/services/api";
 import type { CompareResult, Course } from "@/types/catalog";
 import { CollegeLogo, SampleBadge } from "./CatalogUi";
@@ -75,9 +75,18 @@ function SaveComparison({ result }: { result: CompareResult }) {
 export function CompareTable({ result }: { result: CompareResult }) {
   const cols = result.colleges;
   const fee = (c: Col) => c.offering?.fees[0]?.breakdown ?? null;
+  const current = (c: Col) => c.offering?.fees[0] ?? null;
+  // Per-year figures exist only for fees charged yearly or by semester; anything else is shown as not comparable.
+  const perYear = (c: Col) => {
+    const f = current(c);
+    if (!f) return "Fee not verified";
+    return f.annualOfficialMinor != null ? formatINR(f.annualOfficialMinor) : "Not comparable – charged for the whole course";
+  };
   const rows: Array<[string, (c: Col) => ReactNode]> = [
-    ["Location", (c) => [c.city, c.state].filter(Boolean).join(", ") || "—"],
+    ["Location", (c) => [c.city || c.district, c.state].filter(Boolean).join(", ") || "—"],
+    ["Institution", (c) => [c.category ? CATEGORIES[c.category] : "", c.ownership ? OWNERSHIP[c.ownership] : ""].filter(Boolean).join(" · ") || "—"],
     ["Type", (c) => COLLEGE_TYPES[c.type] ?? c.type],
+    ["AISHE code", (c) => c.aisheCode ?? "—"],
     ["Accreditation", (c) => (c.accreditations.length ? c.accreditations.map((a) => `${a.body}${a.grade ? ` ${a.grade}` : ""}`).join(", ") : "—")],
     ["Approvals", (c) => (c.approvals.length ? c.approvals.join(", ") : "—")],
   ];
@@ -88,20 +97,24 @@ export function CompareTable({ result }: { result: CompareResult }) {
       ["Eligibility", (c) => (c.offering ? c.offering.eligibilityText || (c.offering.minPercentage != null ? `At least ${c.offering.minPercentage}%` : "—") : "—")],
       ["Entrance exams", (c) => (c.offering?.entranceExams.length ? c.offering.entranceExams.join(", ") : "—")],
       ["Application deadline", (c) => (c.offering?.applicationDeadline ? fmtDay(c.offering.applicationDeadline) : "—")],
-      ["Fees for", (c) => (c.offering?.fees[0] ? `${c.offering.fees[0].academicYear}${c.offering.fees[0].intake ? ` · ${c.offering.fees[0].intake}` : ""}` : "Not published")],
-      ["Official college fees (whole course)", (c) => formatINR(fee(c)?.officialTotalMinor)],
+      ["Fees for", (c) => (c.offering?.fees[0] ? `${c.offering.fees[0].academicYear}${c.offering.fees[0].intake ? ` · ${c.offering.fees[0].intake}` : ""}` : "Fee not verified")],
+      ["Official college fees (per year)", perYear],
+      ["Official college fees (whole course)", (c) => (fee(c) ? formatINR(fee(c)!.officialTotalMinor) : "Fee not verified")],
       ["Discount", (c) => (fee(c)?.discountMinor ? `− ${formatINR(fee(c)!.discountMinor)}` : "—")],
-      ["EduPath service charge (separate)", (c) => formatINR(fee(c)?.consultancyServiceChargeMinor)],
+      ["Udaan service charge (separate)", (c) => formatINR(fee(c)?.consultancyServiceChargeMinor)],
       ["Estimated total", (c) => <strong>{formatINR(fee(c)?.estimatedTotalMinor)}</strong>],
-      ["Optional hostel / transport (if opted)", (c) => (fee(c)?.optionalTotalMinor ? formatINR(fee(c)!.optionalTotalMinor) : "—")],
+      ["Hostel per year (if opted)", (c) => (current(c)?.hostelAnnualMinor != null ? formatINR(current(c)!.hostelAnnualMinor!) : "—")],
+      ["Optional hostel / transport (whole course, if opted)", (c) => (fee(c)?.optionalTotalMinor ? formatINR(fee(c)!.optionalTotalMinor) : "—")],
     );
   } else {
     rows.push(
       ["Courses", (c) => c.courses.map((x) => x.name).join(", ") || "—"],
-      ["Official fees (whole course)", (c) => (c.feeFromMinor != null ? (c.feeFromMinor === c.feeToMinor ? formatINR(c.feeFromMinor) : `${formatINR(c.feeFromMinor)} – ${formatINR(c.feeToMinor)}`) : "Not published")],
+      ["Official fees (whole course)", (c) => (c.feeFromMinor != null ? (c.feeFromMinor === c.feeToMinor ? formatINR(c.feeFromMinor) : `${formatINR(c.feeFromMinor)} – ${formatINR(c.feeToMinor)}`) : "Fee not verified")],
+      ["Official fees (per year, from)", (c) => (c.annualFeeFromMinor != null ? formatINR(c.annualFeeFromMinor) : "—")],
     );
   }
-  rows.push(["Details verified", (c) => (c.isSample ? "Sample – not verified" : fmtDay(c.lastVerifiedAt))]);
+  rows.push(["Details verified", (c) => (c.isSample ? "Sample – not verified" : c.listingLevel === "basic" ? "Basic listing – not verified" : fmtDay(c.lastVerifiedAt))]);
+  rows.push(["Data status", (c) => (c.stale ? "May be out of date" : "Current")]);
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-line bg-surface">

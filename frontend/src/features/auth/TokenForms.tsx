@@ -7,6 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/Field";
 import { Alert, Spinner } from "@/components/ui/Feedback";
 import { homeFor, useAuth } from "@/features/auth/AuthProvider";
+import OtpForm from "@/features/auth/OtpForm";
 import { emailProblem, passwordProblem } from "@/lib/validation";
 import { apiPost, fieldErrors } from "@/services/api";
 import type { ApiError, User } from "@/types/api";
@@ -43,9 +44,14 @@ export function RequestLinkForm({ endpoint, label }: { endpoint: "/auth/forgot-p
   );
 }
 
-// Confirms the email address from the link in the verification email (once, on page load).
+// Confirms the email address: with the 6-digit code we email, or with the link from an older verification email.
 export function VerifyEmail() {
   const token = useSearchParams().get("token");
+  return token ? <VerifyLink token={token} /> : <OtpForm />;
+}
+
+// Older verification emails carried a link (used once, on page load).
+function VerifyLink({ token }: { token: string }) {
   const { user, refresh } = useAuth();
   const [state, setState] = useState<{ status: "working" | "done" | "error"; message?: string }>({ status: token ? "working" : "error", message: token ? undefined : "This verification link is incomplete." });
   const started = useRef(false);
@@ -74,8 +80,8 @@ export function VerifyEmail() {
   return (
     <div className="space-y-4">
       <Alert>{state.message}</Alert>
-      <p className="text-sm text-muted">Request a new verification link:</p>
-      <RequestLinkForm endpoint="/auth/resend-verification" label="Send a new link" />
+      <p className="text-sm text-muted">Verify with a code instead:</p>
+      <ButtonLink href="/verify-email">Get a verification code</ButtonLink>
     </div>
   );
 }

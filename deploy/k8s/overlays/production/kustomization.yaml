@@ -1,0 +1,24 @@
+# Production: replace the example host, registry and storage class with yours; pin images by version or digest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: education-consultancy-api
+    newName: registry.example.com/udaan/api
+    newTag: "1.0.0"
+  - name: education-consultancy-web
+    newName: registry.example.com/udaan/web
+    newTag: "1.0.0"
+patches:
+  - target: { kind: Ingress, name: education-consultancy }
+    patch: |
+      - op: add
+        path: /metadata/annotations/cert-manager.io~1cluster-issuer
+        value: letsencrypt
+      - op: add
+        path: /spec/tls
+        value: [{ hosts: [udaan.example.com], secretName: udaan-tls }]
+  - target: { kind: PersistentVolumeClaim, name: uploads }
+    patch: |
+      - { op: add, path: /spec/storageClassName, value: replace-with-your-rwx-storage-class }

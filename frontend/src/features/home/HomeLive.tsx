@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { CollegeCard } from "@/features/catalog/CatalogUi";
+import TopColleges from "@/features/catalog/TopColleges";
 import { ScholarshipCard } from "@/features/scholarships/Scholarships";
 import { useApiData } from "@/hooks/useApiData";
 import { apiGet } from "@/services/api";
@@ -15,7 +16,8 @@ type Testimonial = { id: string; rating: number; quote: string; name: string };
 export default function HomeLive() {
   const data = useApiData(async (signal) => {
     const [colleges, scholarships, testimonials] = await Promise.all([
-      apiGet<Card[]>("/colleges?sort=featured&limit=3", { signal }).catch(() => [] as Card[]),
+      // Only colleges an admin chose to feature, in their chosen order.
+      apiGet<Card[]>("/colleges?featured=yes&sort=featured&limit=6", { signal }).catch(() => [] as Card[]),
       apiGet<Scholarship[]>("/scholarships?open=yes&limit=3", { signal }).catch(() => [] as Scholarship[]),
       apiGet<Testimonial[]>("/testimonials", { signal }).catch(() => [] as Testimonial[]),
     ]);
@@ -35,12 +37,18 @@ export default function HomeLive() {
               Explore all colleges →
             </Link>
           </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {colleges.map((c) => (
-              <CollegeCard key={c.id} college={c} />
+              <CollegeCard key={c.id} college={c} source="featured_college" />
             ))}
           </div>
         </section>
+      )}
+      {colleges.length === 0 && (
+        // No featured colleges yet: well-known institutions with real, credited photos.
+        <div className="mx-auto max-w-7xl px-4 pb-4 sm:px-6">
+          <TopColleges />
+        </div>
       )}
       {scholarships.length > 0 && (
         <section aria-labelledby="scholarships-title" className="bg-surface-2 py-16">
