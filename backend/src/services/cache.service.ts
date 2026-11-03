@@ -106,3 +106,39 @@ export function invalidateOnWrite(namespaces: CacheNamespace[] = ALL) {
     next();
   };
 }
+
+// Short-lived cache for STAFF-ONLY computed answers (e.g. the admin dashboard summary), read only after the route's
+// permission check. Uses Redis when available, otherwise this process's memory (bounded). Never use it for one
+// student's data.
+const local = new Map<string, { expires: number; value: string }>();
+const LOCAL_MAX = 200;
+
+export async function memo<T>(key: string, ttlSeconds: number, load: () => Promise<T>): Promise<T> {
+  const full = redisKey('memo', key);
+  const r = redisClient();
+  try {
+    const hit = r ? await r.get(full) : (local.get(full)?.expires ?? 0) > Date.now() ? local.get(full)!.value : null;
+    if (hit) {
+      cacheStats.hits += 1;
+      return JSON.parse(hit) as T;
+    }
+  } catch (err) {
+    cacheStats.errors += 1;
+    logger.warn({ err: { name: (err as Error).name, message: (err as Error).message } }, 'Memo read failed; computing');
+  }
+  cacheStats.misses += 1;
+  const value = await load();
+  const text = JSON.stringify(value);
+  if (r) {
+    r.set(full, text, { EX: ttlSeconds }).catch((err: Error) => logger.warn({ err: { name: err.name, message: err.message } }, 'Memo write failed'));
+  } else {
+    if (local.size >= LOCAL_MAX) local.delete(local.keys().next().value!);
+    local.set(full, { expires: Date.now() + ttlSeconds * 1000, value: text });
+  }
+  return value;
+}
+
+// Tests start each case with an empty in-process memo.
+export function clearMemo() {
+  local.clear();
+}

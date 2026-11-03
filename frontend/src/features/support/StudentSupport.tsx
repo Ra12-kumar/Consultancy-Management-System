@@ -38,8 +38,8 @@ export function PhotoCard() {
       <h2 className="font-semibold">Profile photo</h2>
       <div className="mt-3 flex items-center gap-4">
         <Avatar name={user.name} size="lg" src={user.photoUrl} />
-        <div className="space-y-2">
-          <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose a profile photo" className="block text-sm" onChange={(e) => void choose(e.target.files?.[0])} disabled={state.busy} />
+        <div className="min-w-0 flex-1 space-y-2">
+          <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose a profile photo" className="block w-full max-w-xs text-sm" onChange={(e) => void choose(e.target.files?.[0])} disabled={state.busy} />
           <p className="text-xs text-muted">JPG, PNG or WebP, up to 2 MB. Only you and our team can see it.</p>
           {user.photoUrl && (
             <Button size="sm" variant="ghost" disabled={state.busy} onClick={async () => setUser(await api<User>("DELETE", "/students/me/photo").then((r) => r.data))}>

@@ -96,17 +96,17 @@ Not found: no `@ts-ignore` or `@ts-expect-error`. There are 59 `eslint-disable` 
 | Phase | Work | Status |
 |---|---|---|
 | 1 | Inspect and audit the repository; this report | **Done** |
-| 2 | Fix bugs: branded 404/error pages (F-06), review the eslint-disable comments, click-through of key screens | Not started |
-| 3 | Error handling additions: `requestId` in error responses (F-07), log the shutdown error (F-12) | Not started |
-| 4 | Unit tests: coverage reporting (F-10), gaps found by coverage | Not started |
-| 5 | Integration tests: the brief's 14 scenarios mapped to existing API tests, with the missing ones added | Not started |
-| 6 | Playwright: admin catalogue, fee and scholarship flows, uploads, session expiry (F-09) | Not started |
-| 7 | Redis cache-aside for public data, with invalidation (F-04) | Not started |
-| 8 | Redis-backed rate limiting with Retry-After (F-03) | Not started |
-| 9 | Index review using `explain()` on the main queries; DATABASE_INDEXES.md | Not started |
-| 10 | Nginx config, 2-instance compose profile, LOAD_BALANCING.md (F-05) | Not started |
-| 11 | Security: zod (F-01), exceljs (F-02), SECURITY_AUDIT.md | Not started |
-| 12 | Responsive checks at 360/375/390/430/768/1024/1366/1920 px on every page | Not started |
-| 13 | k6 load tests at 50/100/250/500 users (F-11); PERFORMANCE_REPORT.md | Not started (needs k6) |
-| 14 | Monitoring: optional Sentry, CI dependency check (F-08) | Not started |
-| 15 | Final verification; PRODUCTION_CHECKLIST.md | Not started |
+| 2 | Fix bugs: branded 404/error pages (F-06), review the eslint-disable comments, click-through of key screens | **Done.** Bugs found later are in BUG_REPORT.md (1 layout, 2 Zod 4, 1 crash) |
+| 3 | Error handling additions: `requestId` in error responses (F-07), log the shutdown error (F-12) | **Done** |
+| 4 | Unit tests: coverage reporting (F-10), gaps found by coverage | **Done.** Backend 84.2%, frontend 41.7% of statements (TESTING_REPORT.md) |
+| 5 | Integration tests: the brief's 14 scenarios mapped to existing API tests, with the missing ones added | **Done.** All 14 mapped; parallel-enquiry and Redis tests added |
+| 6 | Playwright: admin catalogue, fee and scholarship flows, uploads, session expiry (F-09) | **Partly done.** 14 journeys pass; the listed flows are covered by API tests only |
+| 7 | Redis cache-aside for public data, with invalidation (F-04) | **Done** (REDIS_CACHING.md) |
+| 8 | Redis-backed rate limiting with Retry-After (F-03) | **Done** |
+| 9 | Index review using `explain()` on the main queries; DATABASE_INDEXES.md | **Done.** 1 index added; `migrate:indexes` |
+| 10 | Nginx config, 2-instance compose profile, LOAD_BALANCING.md (F-05) | **Done**, plus Kubernetes (KUBERNETES.md). A live Nginx run is pending because Docker stopped responding |
+| 11 | Security: zod (F-01), exceljs (F-02), SECURITY_AUDIT.md | **Done.** Zod 4 (0 high advisories); exceljs accepted with reasons |
+| 12 | Responsive checks at 360/375/390/430/768/1024/1366/1920 px on every page | **Done.** 408 checks, 1 fix |
+| 13 | k6 load tests at 50/100/250/500 users (F-11); PERFORMANCE_REPORT.md | **Done** (official k6 binary); dashboard made 10–17× faster |
+| 14 | Monitoring: optional Sentry, CI dependency check (F-08) | **CI part done** (audit, coverage, Redis). Sentry needs your DSN |
+| 15 | Final verification; PRODUCTION_CHECKLIST.md | **Done** (TESTING_REPORT.md, PRODUCTION_CHECKLIST.md) |

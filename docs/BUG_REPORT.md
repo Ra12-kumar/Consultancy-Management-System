@@ -1,0 +1,21 @@
+# Bug report: production-readiness work
+
+Defects found while auditing and testing the consultancy system. Each has a root cause, the fix, and the test that now covers it. Findings that are improvements rather than defects are in SYSTEM_AUDIT.md.
+
+| # | Severity | File(s) | Issue | Root cause | Fix | Verified by |
+|---|---|---|---|---|---|---|
+| B-1 | **High** | `backend/src/validators/*` (update schemas) | After the Zod 4 upgrade, editing one field of a college, course, location, offering or scholarship reset the other fields to their defaults. Example: publishing failed with "A published college needs a city" because the city was wiped. | Zod 4 applies defaults inside optional fields, and `.partial()` keeps defaults. Zod 3 skipped them, as a code comment relied on. | `patchOf()` makes update fields optional **without** defaults; used by all five update schemas | `tests/patchOf.test.ts`; `collegeCourses`, `collegeImages`, `directory` and `scholarships` tests (all passing again) |
+| B-2 | **High** | `backend/src/validators/*` (6 schemas) | Zod 4 rejected `.default({})` on nested objects whose fields have their own defaults (6 type errors) | In Zod 4 a default must be the *output* value | `.prefault({})`, which keeps the Zod 3 behaviour exactly | Typecheck and the full backend suite |
+| B-3 | Medium | `frontend/src/features/support/StudentSupport.tsx` | `/student/settings` scrolled sideways on phones (73 px at 360 px, 58 px at 375, 43 px at 390, 3 px at 430) | The file picker has a fixed natural width (~316 px) inside a non-shrinking flex column next to the photo | Column `min-w-0 flex-1`; picker `w-full max-w-xs` | Responsive check: 0 overflow at all 8 widths |
+| B-4 | Medium | `frontend/src/features/admin/enquiries/CallbackLeads.tsx`, `backend/src/services/callbackLeadAdmin.service.ts` | The admin Enquiries page crashed ("Cannot read properties of undefined (reading 'trim')") | Callback requests saved before the note field existed had no `note`; lean reads skip schema defaults | Server fills safe defaults for older records; the screen also accepts a missing note | `tests/callbackLead.test.ts` ("saved before assignment and notes existed") |
+| B-5 | Medium | `frontend/src/app` | Unknown addresses showed the plain framework 404, and render errors showed the framework's default screen | No `not-found.tsx`, `error.tsx` or `global-error.tsx` | Branded 404, error and global-error pages with ways back | `/no-such-page` returns 404 with the branded page; responsive check |
+| B-6 | Low | `backend/src/server.ts` | An error while closing MongoDB on shutdown was silently dropped (`.catch(() => {})`) | Empty catch | Logged at warn level | Code review |
+| B-7 | Low | `frontend/src/hooks/useApiData.ts` | A lint exception had no justification | — | Reason added (callers pass the loader's dependencies) | Lint |
+| B-8 | Low (tests) | `frontend/vitest.config.mts` | 13 form tests timed out under coverage instrumentation on a busy machine (5 s default) | Default timeout too tight for multi-step form tests | 20 s, the same as the backend | Frontend suite |
+| B-9 | Low (tests) | `backend/tests/auth.test.ts` | Two "same answer for known and unknown accounts" tests compared whole bodies, which now differ only by the random `requestId` | The new `requestId` field | Compare the `error` part (the security property is unchanged) | Backend suite |
+
+## Found and confirmed **not** to be bugs
+
+- **"Follow-ups due" query scans the collection** (`explain`): on a 1-document collection the planner prefers a scan. `hint()` confirms the partial index serves the query (DATABASE_INDEXES.md).
+- **36 "load timeout" results in the first responsive run:** pages that keep polling never reach "network idle", and the development server was busy. A re-check of all 7 pages, waiting for the page to load instead, found 0 problems.
+- **The load-balanced Docker build failed:** a network timeout downloading npm packages inside Docker, then Docker Desktop stopped responding after the computer slept. Not a code defect; see PERFORMANCE_REPORT.md.

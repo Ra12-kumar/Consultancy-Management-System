@@ -1,13 +1,17 @@
 import type { Request, Response } from 'express';
 import type { Permission } from '../models/User.js';
 import * as admin from '../services/admin.service.js';
+import { memo } from '../services/cache.service.js';
 import * as invites from '../services/inviteCode.service.js';
 import { sendSuccess } from '../utils/response.js';
 
 type Page = { page: number; limit: number };
 
+// The summary runs about twenty counts and aggregations; admins see figures at most 20 s old (the same for every
+// admin allowed to open it, keyed by the chosen filters).
 export async function summary(req: Request, res: Response) {
-  sendSuccess(res, await admin.dashboardSummary(req.valid.query as Parameters<typeof admin.dashboardSummary>[0]));
+  const filter = req.valid.query as Parameters<typeof admin.dashboardSummary>[0];
+  sendSuccess(res, await memo(`dashboard:admin:${JSON.stringify(filter)}`, 20, () => admin.dashboardSummary(filter)));
 }
 export async function students(req: Request, res: Response) {
   const { items, meta } = await admin.listStudents(req.valid.query as Parameters<typeof admin.listStudents>[0]);

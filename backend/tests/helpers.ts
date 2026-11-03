@@ -6,6 +6,7 @@ import { connectDatabase, disconnectDatabase } from '../src/config/database.js';
 import { env } from '../src/config/env.js';
 import { setMailTransport, type MailMessage } from '../src/config/mail.js';
 import { processEmailQueue } from '../src/services/emailWorker.js';
+import { clearMemo } from '../src/services/cache.service.js';
 import { invalidateDirectoryCache } from '../src/services/directory/cache.js';
 
 export const ORIGIN = 'http://localhost:3000';
@@ -29,6 +30,7 @@ export function useTestDb() {
     await Promise.all(collections.map((c) => c.deleteMany({})));
     outbox.length = 0;
     invalidateDirectoryCache();
+    clearMemo();
     failNextSends = 0;
     setMailTransport({
       async send(m) {
