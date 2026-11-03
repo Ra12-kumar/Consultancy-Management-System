@@ -91,6 +91,12 @@ const PATHS = {
       <path d="m8 12 3 3 5-6" />
     </>
   ),
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </>
+  ),
   cap: <path d="M2 9l10-5 10 5-10 5L2 9ZM6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5M22 9v6" />,
 } satisfies Record<string, ReactNode>;
 
