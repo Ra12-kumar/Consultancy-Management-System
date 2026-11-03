@@ -12,6 +12,7 @@ Defects found while auditing and testing the consultancy system. Each has a root
 | B-6 | Low | `backend/src/server.ts` | An error while closing MongoDB on shutdown was silently dropped (`.catch(() => {})`) | Empty catch | Logged at warn level | Code review |
 | B-7 | Low | `frontend/src/hooks/useApiData.ts` | A lint exception had no justification | — | Reason added (callers pass the loader's dependencies) | Lint |
 | B-8 | Low (tests) | `frontend/vitest.config.mts` | 13 form tests timed out under coverage instrumentation on a busy machine (5 s default) | Default timeout too tight for multi-step form tests | 20 s, the same as the backend | Frontend suite |
+| B-10 | Medium | `frontend/src/components/SiteHeader.tsx` | Browser error "Hydration failed … server rendered HTML didn't match the client" in the profile menu for signed-in users | The header hydrates inside a Suspense boundary, sometimes after the sign-in check has returned, so the client rendered the profile menu where the server had rendered the loading placeholder | The header shows the server's "loading" state until it has hydrated (`useSyncExternalStore`), then the real state | 24 signed-in page loads across 8 pages: 0 hydration errors; frontend suite 95/95 |
 | B-9 | Low (tests) | `backend/tests/auth.test.ts` | Two "same answer for known and unknown accounts" tests compared whole bodies, which now differ only by the random `requestId` | The new `requestId` field | Compare the `error` part (the security property is unchanged) | Backend suite |
 
 ## Found and confirmed **not** to be bugs
