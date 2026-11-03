@@ -3,12 +3,9 @@
 /* eslint-disable @next/next/no-img-element -- local photo from the client design */
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import CallbackLeads from "@/features/admin/enquiries/CallbackLeads";
 import { telHref } from "@/features/admin/enquiries/PhoneActions";
 import { Icon, type IconName } from "@/features/admin/workspace/icons";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { followUpLabel } from "@/features/counsellor/MyEnquiriesBoard";
-import { StatusBadge } from "@/features/enquiry/shared";
 import { useApiData } from "@/hooks/useApiData";
 import { waHref } from "@/lib/whatsapp";
 import { api, apiGet } from "@/services/api";
@@ -137,75 +134,10 @@ function Donut({ pct }: { pct: number }) {
   );
 }
 
-function EnquiryRows({ quick }: { quick: "" | "today" | "overdue" }) {
-  const qs = new URLSearchParams({ limit: "5", sort: quick ? "follow_up" : "activity", ...(quick ? { quick } : { open: "yes" }) });
-  const list = useApiData((signal) => api<AdminEnquiryRow[]>("GET", `/counsellor/enquiries?${qs}`, { signal }), [qs.toString()]);
-  const rows = list.data?.data;
-  const more = `/counsellor/enquiries${quick ? `?quick=${quick}` : ""}`;
-  if (list.status === "error") return <p className="p-4 text-sm text-rose-600">These enquiries could not be loaded.</p>;
-  if (!rows) return <div className="m-4 h-24 animate-pulse rounded-xl bg-violet-50" />;
-  if (!rows.length) return <p className="p-6 text-center text-sm text-slate-500">{quick === "overdue" ? "Nothing overdue. Well done." : quick === "today" ? "No follow-ups due today." : "No open enquiries assigned to you yet."}</p>;
-  return (
-    <>
-      <ul className="divide-y divide-violet-50">
-        {rows.map((e) => {
-          const f = followUpLabel(e.followUpAt);
-          const wa = waHref(e.studentMobile);
-          return (
-            <li key={e.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-              <span className="flex min-w-0 flex-1 items-center gap-3">
-                <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-violet-100 font-semibold text-violet-700">
-                  {e.studentName.charAt(0).toUpperCase()}
-                </span>
-                <span className="min-w-0">
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-                    {e.studentName} <StatusBadge status={e.status} />
-                  </span>
-                  <span className="block truncate text-xs text-slate-500">
-                    {e.reference} · {e.courses.join(", ") || "Course not chosen"} · Follow-up: <span className={f.overdue ? "font-semibold text-rose-600" : ""}>{f.text}</span>
-                  </span>
-                </span>
-              </span>
-              <span className="flex flex-wrap gap-2 text-xs font-semibold">
-                {e.studentMobile && (
-                  <a href={telHref(e.studentMobile)} className="inline-flex h-8 items-center gap-1 rounded-lg bg-violet-50 px-2.5 text-violet-700 hover:bg-violet-100" aria-label={`Call ${e.studentName}`}>
-                    <Icon name="phone" size={14} /> Call
-                  </a>
-                )}
-                {wa && (
-                  <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-50 px-2.5 text-emerald-700 hover:bg-emerald-100" aria-label={`Chat on WhatsApp with ${e.studentName}`}>
-                    <Icon name="chat" size={14} /> WhatsApp
-                  </a>
-                )}
-                <Link href={`/counsellor/enquiries/${e.id}`} className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-2.5 hover:bg-slate-50" aria-label={`Open ${e.reference}`}>
-                  Open
-                </Link>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="border-t border-violet-50 p-3 text-right text-xs">
-        <Link href={more} className="font-semibold text-violet-700 hover:underline">
-          View all →
-        </Link>
-      </p>
-    </>
-  );
-}
-
-const TABS = [
-  { key: "callbacks", label: "Website Callbacks", icon: "callback" as IconName },
-  { key: "mine", label: "My Enquiries", icon: "enquiries" as IconName },
-  { key: "today", label: "Follow-ups", icon: "calendar" as IconName },
-  { key: "overdue", label: "Overdue", icon: "info" as IconName },
-] as const;
-
 export default function CounsellorDashboard() {
   const { user } = useAuth();
   const today = istDate(new Date());
   const [range, setRange] = useState(7);
-  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("callbacks");
   const [weekStart, setWeekStart] = useState(() => addDays(today, -new Date(`${today}T12:00:00+05:30`).getUTCDay()));
   const [done, setDone] = useState<string[]>([]);
   const add = useAddEnquiry();
@@ -283,7 +215,6 @@ export default function CounsellorDashboard() {
   const weekTotal = trend.data?.reduce((n, d) => n + d.count, 0) ?? 0;
   const rate = s && s.assignedTotal ? Math.round((s.converted / s.assignedTotal) * 100) : 0;
   const firstName = user?.name.split(" ")[0] ?? "";
-  const tabCount = { callbacks: newLeads, mine: s?.assignedOpen ?? 0, today: s?.followUpsToday ?? 0, overdue: s?.followUpsOverdue ?? 0 };
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -341,32 +272,6 @@ export default function CounsellorDashboard() {
               <Donut pct={rate} />
               <p className="mt-1 text-[11px] text-slate-500">{s ? `${s.converted} of ${s.assignedTotal} admitted` : ""}</p>
             </div>
-          </div>
-        </section>
-
-        {/* Work lists */}
-        <section aria-label="Work lists" className={card}>
-          <div role="tablist" aria-label="Work lists" className="flex gap-1 overflow-x-auto border-b border-violet-100 px-3 pt-2">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                role="tab"
-                aria-selected={tab === t.key}
-                onClick={() => setTab(t.key)}
-                className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-xs font-semibold ${tab === t.key ? "border-violet-600 text-violet-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}
-              >
-                <Icon name={t.icon} size={15} />
-                {t.label}
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${t.key === "overdue" && tabCount.overdue ? "bg-rose-100 text-rose-700" : "bg-violet-100 text-violet-700"}`}>{tabCount[t.key]}</span>
-              </button>
-            ))}
-            <button type="button" onClick={add.open} className="my-1 ml-auto inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700">
-              <Icon name="plus" size={14} /> Add Enquiry
-            </button>
-          </div>
-          <div role="tabpanel" className="[&_.mb-6]:mb-0 [&_.mb-6]:border-0 [&_.mb-6]:shadow-none">
-            {tab === "callbacks" ? <CallbackLeads role="counsellor" /> : <EnquiryRows quick={tab === "mine" ? "" : tab} />}
           </div>
         </section>
       </div>

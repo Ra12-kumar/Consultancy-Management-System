@@ -18,15 +18,18 @@ import { api, apiGet } from "@/services/api";
 type Summary = { assignedOpen: number; assignedTotal: number; converted: number; followUpsToday: number; followUpsOverdue: number };
 type Item = { href: string; label: string; icon: IconName; badge?: "open" | "callbacks"; tone?: string };
 
-const NAV: Item[] = [
-  { href: "/counsellor", label: "Dashboard", icon: "dashboard" },
-  { href: "/counsellor/enquiries", label: "My Enquiries", icon: "enquiries", badge: "open" },
-  { href: "/counsellor/enquiries#callback-leads-title", label: "Callback Requests", icon: "callback", badge: "callbacks", tone: "bg-rose-500" },
-  { href: "/counsellor/enquiries?quick=today", label: "Follow-ups", icon: "calendar" },
-  { href: "/counsellor/enquiries?quick=new", label: "Assigned Students", icon: "students" },
-  { href: "/courses/browse", label: "Browse Courses", icon: "courses" },
-  { href: "/counsellor#overview", label: "Reports & Analytics", icon: "reports" },
-  { href: "/counsellor/settings", label: "Settings", icon: "settings" },
+// Grouped for a calmer menu: daily work first, then the account.
+const NAV: Array<{ title: string; items: Item[] }> = [
+  {
+    title: "Menu",
+    items: [
+      { href: "/counsellor", label: "Dashboard", icon: "dashboard" },
+      { href: "/counsellor/enquiries", label: "My Enquiries", icon: "enquiries", badge: "open" },
+      { href: "/courses/browse", label: "Browse Courses", icon: "courses" },
+      { href: "/counsellor#overview", label: "Reports & Analytics", icon: "reports" },
+    ],
+  },
+  { title: "Account", items: [{ href: "/counsellor/settings", label: "Settings", icon: "settings" }] },
 ];
 
 const TITLES: Record<string, [string, string]> = {
@@ -35,7 +38,11 @@ const TITLES: Record<string, [string, string]> = {
   "/counsellor/settings": ["Settings", "Your account, password and sign-in security."],
 };
 
-const hideSiteChrome = `body:has(#counsellor-workspace) > header, body:has(#counsellor-workspace) > footer, body:has(#counsellor-workspace) > [aria-label="Announcements"] { display: none; }`;
+// The site header and footer are hidden here, and the counsellor area always uses the light colour tokens (the
+// design is light; without this, shared components follow the device's dark mode and become unreadable on the
+// light background).
+const hideSiteChrome = `body:has(#counsellor-workspace) > header, body:has(#counsellor-workspace) > footer, body:has(#counsellor-workspace) > [aria-label="Announcements"] { display: none; }
+#counsellor-workspace { color-scheme: light; --background: #f5f7fb; --foreground: #0b1f44; --surface: #ffffff; --surface-2: #eef2f9; --line: #dde3ee; --muted: #4a5672; --primary: #0b1f44; --primary-fg: #ffffff; --accent: #c9a227; --accent-fg: #0b1f44; --accent-text: #8a6d0f; --success: #15803d; --warning: #a16207; --danger: #b91c1c; --ring: #c9a227; }`;
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || "C";
 
 function Photo({ name, src, size = 40 }: { name: string; src?: string | null; size?: number }) {
@@ -106,59 +113,71 @@ export default function CounsellorWorkspaceShell({ children }: { children: React
   };
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-gradient-to-b from-[#1e1150] via-[#24125e] to-[#170c3d] text-white">
-      <Link href="/counsellor" className="flex items-center gap-3 px-5 pt-5 pb-4" aria-label="Udaan counsellor dashboard">
-        <img src="/udan/flight-mark-light.svg" alt="" width={34} height={33} />
+    <div className="flex h-full flex-col bg-[radial-gradient(120%_60%_at_0%_0%,#4c2fb8_0%,transparent_60%),linear-gradient(180deg,#2a1872_0%,#1d1157_55%,#150c40_100%)] text-white">
+      <Link href="/counsellor" className="flex items-center gap-3 px-5 pt-6 pb-5 focus-visible:outline-none" aria-label="Udaan counsellor dashboard">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+          <img src="/udan/flight-mark-light.svg" alt="" width={24} height={23} />
+        </span>
         <span className="leading-tight">
-          <span className="block text-xl font-bold">Udaan</span>
-          <span className="block text-[11px] text-white/70">Education Consultancy</span>
+          <span className="block text-xl font-bold tracking-tight">Udaan</span>
+          <span className="block text-[11px] text-violet-200/80">Education Consultancy</span>
         </span>
       </Link>
-      <div className="mx-4 flex items-center gap-3 border-y border-white/10 py-4">
+      <div className="mx-4 flex items-center gap-3 rounded-2xl bg-white/[0.07] p-3 ring-1 ring-white/10">
         <span className="relative">
-          <Photo name={user.name} src={user.photoUrl} size={44} />
-          <span aria-hidden="true" className="absolute right-0 bottom-0 size-3 rounded-full bg-emerald-400 ring-2 ring-[#24125e]" />
+          <Photo name={user.name} src={user.photoUrl} size={42} />
+          <span aria-hidden="true" className="absolute right-0 bottom-0 size-3 rounded-full bg-emerald-400 ring-2 ring-[#24156a]" />
         </span>
         <span className="min-w-0 leading-tight">
           <span className="block truncate text-sm font-semibold">{user.name}</span>
-          <span className="block text-[11px] text-white/70">Counsellor</span>
-          <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-400" /> Online
+          <span className="mt-0.5 flex items-center gap-2 text-[11px] text-violet-200/80">
+            Counsellor
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-emerald-400" /> Online
+            </span>
           </span>
         </span>
       </div>
-      <nav aria-label="Counsellor sections" className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="space-y-1">
-          {NAV.map((i) => {
-            const active = isActive(i.href);
-            const badge = i.badge ? counts[i.badge] : 0;
-            return (
-              <li key={i.href}>
-                <Link
-                  href={i.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-10 items-center gap-3 rounded-xl px-3 text-[13px] focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:outline-none ${active ? "bg-gradient-to-r from-violet-600 to-indigo-500 font-semibold shadow-lg shadow-violet-900/40" : "text-white/75 hover:bg-white/10 hover:text-white"}`}
-                >
-                  <Icon name={i.icon} />
-                  <span className="flex-1">{i.label}</span>
-                  {badge > 0 && (
-                    <span className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${i.tone ?? "bg-violet-500"}`}>
-                      {badge}
-                      <span className="sr-only">{i.badge === "open" ? " open enquiries" : " new callback requests"}</span>
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      <nav aria-label="Counsellor sections" className="flex-1 overflow-y-auto px-3 pt-5 pb-4">
+        {NAV.map((group) => (
+          <div key={group.title} className="mb-4">
+            <p className="px-3 pb-2 text-[10px] font-semibold tracking-[1.6px] text-violet-200/60 uppercase">{group.title}</p>
+            <ul className="space-y-1">
+              {group.items.map((i) => {
+                const active = isActive(i.href);
+                const badge = i.badge ? counts[i.badge] : 0;
+                return (
+                  <li key={i.href}>
+                    <Link
+                      href={i.href}
+                      aria-current={active ? "page" : undefined}
+                      className={`group relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13.5px] transition-colors focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:outline-none ${active ? "bg-white font-semibold text-[#2a1872] shadow-lg shadow-black/20" : "text-violet-100/80 hover:bg-white/[0.08] hover:text-white"}`}
+                    >
+                      <span className={`flex size-8 items-center justify-center rounded-lg ${active ? "bg-violet-100 text-violet-700" : "bg-white/[0.06] text-violet-200 group-hover:text-white"}`}>
+                        <Icon name={i.icon} />
+                      </span>
+                      <span className="flex-1">{i.label}</span>
+                      {badge > 0 && (
+                        <span className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${active ? "bg-violet-600 text-white" : (i.tone ?? "bg-violet-500 text-white")}`}>
+                          {badge}
+                          <span className="sr-only">{i.badge === "open" ? " open enquiries" : " new callback requests"}</span>
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
-      <div className="m-4 rounded-2xl bg-gradient-to-br from-violet-500/40 to-indigo-500/30 p-4 ring-1 ring-white/15">
+      <div className="m-4 overflow-hidden rounded-2xl bg-gradient-to-br from-violet-500/35 to-fuchsia-500/20 p-4 ring-1 ring-white/15">
         <span className="flex size-10 items-center justify-center rounded-xl bg-white/15">
           <Icon name="cap" size={22} />
         </span>
-        <p className="mt-3 text-sm font-semibold">Help More Students Achieve Their Goals</p>
-        <Link href="/courses/browse" className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#24125e] hover:bg-violet-50">
+        <p className="mt-3 text-sm leading-snug font-semibold">Help More Students Achieve Their Goals</p>
+        <p className="mt-1 text-[11px] text-violet-100/75">Find courses and colleges to recommend.</p>
+        <Link href="/courses/browse" className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-xs font-semibold text-[#2a1872] hover:bg-violet-50">
           Browse Courses <Icon name="arrowRight" size={14} />
         </Link>
       </div>
