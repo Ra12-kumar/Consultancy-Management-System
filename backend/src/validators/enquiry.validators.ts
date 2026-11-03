@@ -78,6 +78,9 @@ export const adminEnquiriesQuery = z
     from: isoDate.optional(),
     to: isoDate.optional(),
     followUpDue: z.literal('yes').optional(),
+    // Optional: enquiries whose follow-up falls in this range.
+    followUpFrom: isoDate.optional(),
+    followUpTo: isoDate.optional(),
     // Quick views: new enquiries, today's calls, overdue follow-ups, confirmed admissions, callback requests.
     quick: z.enum(['new', 'today', 'overdue', 'admitted', 'callback']).optional(),
     source: z.enum(LEAD_SOURCES).optional(),

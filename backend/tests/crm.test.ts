@@ -112,3 +112,16 @@ describe('quick views, export and dashboard', () => {
     expect((await w.student.c.get('/api/admin/enquiries/export')).status).toBe(403);
   });
 });
+
+describe('follow-up date range filter', () => {
+  it('lists enquiries whose follow-up falls in the range (used by the counsellor calendar)', async () => {
+    const w = await enquiryWorld();
+    const { id } = await submitEnquiry(w);
+    const at = new Date(Date.now() + 3 * 86_400_000);
+    expect((await w.admin.c.patch(`/api/admin/enquiries/${id}`, { followUpAt: at.toISOString() })).status).toBe(200);
+    const range = (from: number, to: number) => `followUpFrom=${new Date(Date.now() + from * 86_400_000).toISOString()}&followUpTo=${new Date(Date.now() + to * 86_400_000).toISOString()}`;
+    expect((await w.admin.c.get(`/api/admin/enquiries?${range(2, 4)}`)).body.meta.total).toBe(1);
+    expect((await w.admin.c.get(`/api/admin/enquiries?${range(5, 9)}`)).body.meta.total).toBe(0);
+    expect((await w.admin.c.get('/api/admin/enquiries?followUpFrom=not-a-date')).status).toBe(422);
+  });
+});

@@ -49,7 +49,7 @@ export async function autoStatus(e: Lean, to: EnquiryStatus, fromAllowed: Enquir
 
 // ---- Lists ----
 
-type Filters = { q?: string; status?: EnquiryStatus; open?: 'yes'; assigned?: string; course?: string; college?: string; state?: string; from?: Date; to?: Date; followUpDue?: 'yes'; quick?: 'new' | 'today' | 'overdue' | 'admitted' | 'callback'; source?: string; sort: 'newest' | 'oldest' | 'activity' | 'follow_up' };
+type Filters = { q?: string; status?: EnquiryStatus; open?: 'yes'; assigned?: string; course?: string; college?: string; state?: string; from?: Date; to?: Date; followUpDue?: 'yes'; followUpFrom?: Date; followUpTo?: Date; quick?: 'new' | 'today' | 'overdue' | 'admitted' | 'callback'; source?: string; sort: 'newest' | 'oldest' | 'activity' | 'follow_up' };
 type ListQuery = Filters & { page: number; limit: number };
 
 // Start and end of today in India (follow-ups are planned in IST).
@@ -75,6 +75,8 @@ function enquiryFilter(req: Request, q: Filters) {
   if (q.state) filter['studentSnapshot.state'] = new RegExp(`^${escapeRegex(q.state)}$`, 'i');
   if (q.source) filter.source = q.source;
   if (q.from || q.to) filter.createdAt = { ...(q.from && { $gte: q.from }), ...(q.to && { $lte: q.to }) };
+  // Optional follow-up date range (e.g. a week in the counsellor calendar).
+  if (q.followUpFrom || q.followUpTo) filter.followUpAt = { ...(q.followUpFrom && { $gte: q.followUpFrom }), ...(q.followUpTo && { $lte: q.followUpTo }) };
   if (q.followUpDue === 'yes') {
     filter.followUpAt = { $lte: new Date() };
     filter.status = filter.status ?? { $nin: FINISHED_STATUSES };

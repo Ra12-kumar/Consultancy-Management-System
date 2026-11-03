@@ -72,6 +72,26 @@ const PATHS = {
     </>
   ),
   sort: <path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4" />,
+  phone: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z" />,
+  chat: <path d="M4 20l1.4-4A8 8 0 1 1 8 18.6L4 20Z" />,
+  mail: <path d="M3 6h18v12H3zM3 7l9 6 9-6" />,
+  userPlus: (
+    <>
+      <circle cx="9" cy="8" r="4" />
+      <path d="M2 21c.8-4 3.6-6 7-6s6.2 2 7 6M19 8v6M16 11h6" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  tasks: <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />,
+  trendUp: <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />,
+  callback: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2ZM15 3h6v6M21 3l-6 6" />,
+  checkCircle: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8 12 3 3 5-6" />
+    </>
+  ),
+  cap: <path d="M2 9l10-5 10 5-10 5L2 9ZM6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5M22 9v6" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;
