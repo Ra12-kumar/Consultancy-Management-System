@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Avatar } from "@/components/ui/Feedback";
 import { homeFor, useAuth } from "@/features/auth/AuthProvider";
 
@@ -86,8 +86,15 @@ function ProfileMenu() {
   );
 }
 
+// false while React hydrates the server HTML, true afterwards.
+const noop = () => () => {};
+const useHydrated = () => useSyncExternalStore(noop, () => true, () => false);
+
 export default function SiteHeader() {
-  const { status } = useAuth();
+  const auth = useAuth();
+  // The header hydrates inside a Suspense boundary, sometimes after the sign-in check has finished. Until it has
+  // hydrated it shows the same "loading" state the server rendered, so the HTML always matches.
+  const status = useHydrated() ? auth.status : "loading";
   const pathname = usePathname();
   const [menu, setMenu] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- close the mobile menu after navigation
