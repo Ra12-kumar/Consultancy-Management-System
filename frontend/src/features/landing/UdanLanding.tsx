@@ -395,9 +395,6 @@ export default function UdanLanding() {
               Bring your programmes to the right conversations. Partner with Udaan for clear programme discovery and a more considered admissions journey.
             </Intro>
             <Checks icon="check-gold" tone="text-[#c8d2da]" items={["Present accurate courses, entry criteria and fee information", "Support relevant enquiries with a shared follow-up process", "Keep student consent and transparent communication central"]} />
-            <Action href="/contact?topic=partnership" arrow="arrow-partner-btn">
-              Discuss a partnership
-            </Action>
             <p className="text-xs text-[#c8d2da]">For admissions teams and institutional decision-makers.</p>
           </div>
           <div className="w-full flex-1 overflow-hidden rounded-[10px] bg-white">
@@ -475,8 +472,8 @@ export default function UdanLanding() {
           <div className="grid flex-1 grid-cols-2 gap-10 sm:grid-cols-3">
             {[
               ["For students", [["Find colleges", "/colleges"], ["Explore courses", "/courses"], ["Counselling", "#counselling"], ["Student resources", "#resources"]]],
-              ["For institutions", [["Partner with Udaan", "#institutions"], ["Our approach", "#institutions"], ["Partnership enquiry", "/contact?topic=partnership"]]],
-              ["About Udaan", [["Our purpose", "/about"], ["How we work", "/admission-process"], ["FAQs", "/faq"], ["Contact us", "/contact"]]],
+              ["For institutions", [["Partner with Udaan", "#institutions"], ["Our approach", "#institutions"]]],
+              ["About Udaan", [["Our purpose", "/about"], ["How we work", "/admission-process"], ["FAQs", "/faq"]]],
             ].map(([heading, links]) => (
               <nav key={heading as string} aria-label={heading as string} className="flex flex-col gap-[18px] text-xs">
                 <p className="text-[13px] font-semibold text-white">{heading as string}</p>

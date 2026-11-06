@@ -19,7 +19,7 @@ test("the mobile menu opens and leads to the college directory", async ({ page }
   await expect(more).toBeVisible();
 });
 
-for (const path of ["/", "/colleges", "/scholarships", "/courses", "/courses/browse", "/login", "/register", "/about", "/contact", "/udan"]) {
+for (const path of ["/", "/colleges", "/scholarships", "/courses", "/courses/browse", "/login", "/register", "/about", "/udan"]) {
   test(`no sideways scrolling on ${path}`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");

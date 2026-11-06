@@ -54,9 +54,6 @@ export default function SignInFrame({ children }: { children: ReactNode }) {
           <Link href="/" className="font-medium hover:text-foreground hover:underline">
             ← Back to home
           </Link>
-          <Link href="/contact" className="font-medium hover:text-foreground hover:underline">
-            Need help?
-          </Link>
         </nav>
       </div>
     </main>

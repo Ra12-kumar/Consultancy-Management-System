@@ -12,7 +12,6 @@ export const NAV = [
   { href: "/scholarships", label: "Scholarships" },
   { href: "/admission-process", label: "Admission process" },
   { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
 ] as const;
 
 function Logo() {

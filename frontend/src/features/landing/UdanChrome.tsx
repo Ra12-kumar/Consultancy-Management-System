@@ -78,7 +78,6 @@ export function UdanHeader({ active }: { active?: string }) {
 const FOOTER_LINKS = [
   ["My enquiries", "/student/enquiries"],
   ["Student resources", "/#resources"],
-  ["Contact us", "/contact"],
   ["Partner with Udaan ↗", "/#institutions"],
 ] as const;
 

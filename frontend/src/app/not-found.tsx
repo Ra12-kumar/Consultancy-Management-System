@@ -15,9 +15,6 @@ export default function NotFound() {
         <ButtonLink href="/colleges" variant="secondary">
           Find colleges
         </ButtonLink>
-        <ButtonLink href="/contact" variant="secondary">
-          Contact us
-        </ButtonLink>
       </div>
     </main>
   );

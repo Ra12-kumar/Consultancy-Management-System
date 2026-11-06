@@ -133,9 +133,6 @@ export function SupportCard() {
       <h2 className="font-semibold">Need help?</h2>
       <p className="mt-1 text-sm text-muted">Questions about admissions, fees or your account? We are here to help.</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <ButtonLink href="/contact" size="sm" variant="secondary">
-          Contact us
-        </ButtonLink>
         <ButtonLink href="/student/feedback" size="sm" variant="secondary">
           Send feedback
         </ButtonLink>

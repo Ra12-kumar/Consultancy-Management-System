@@ -4,7 +4,7 @@ import SocialLinks from "@/features/content/SocialLinks";
 const columns = [
   { title: "Explore", links: [["/colleges", "Colleges"], ["/courses", "Courses"], ["/scholarships", "Scholarships"], ["/admission-process", "Admission process"]] },
   { title: "Students", links: [["/register", "Create an account"], ["/login", "Sign in"], ["/student", "Student dashboard"], ["/faq", "FAQ"]] },
-  { title: "Company", links: [["/about", "About us"], ["/contact", "Contact"], ["/privacy", "Privacy policy"], ["/terms", "Terms and conditions"]] },
+  { title: "Company", links: [["/about", "About us"], ["/privacy", "Privacy policy"], ["/terms", "Terms and conditions"]] },
 ] as const;
 
 export default function SiteFooter() {
