@@ -50,7 +50,7 @@ export default function AdminWorkspaceShell({ groups, children }: { groups: Work
   const canCount = user?.role === "admin" && user.permissions.includes("students.read");
   const summary = useApiData((signal) => (canCount ? apiGet<SummaryCounts>("/admin/dashboard/summary", { signal }) : Promise.resolve(null)), [canCount, pathname === BASE]);
   const counts: Counts | null = summary.data
-    ? { students: summary.data.totals?.students ?? summary.data.students.total, newEnquiries: summary.data.charts.byStatus.filter((s) => s.status === "NEW").reduce((n, s) => n + s.count, 0) }
+    ? { students: summary.data.totals?.students ?? summary.data.students?.total ?? 0, newEnquiries: (summary.data.charts?.byStatus ?? []).filter((s) => s.status === "NEW").reduce((n, s) => n + s.count, 0) }
     : null;
 
   useEffect(() => {

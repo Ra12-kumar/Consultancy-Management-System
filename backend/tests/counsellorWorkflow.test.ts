@@ -159,3 +159,22 @@ describe('reports, social links and recommendations (phases 6-8)', () => {
     expect(alpha.eligibility).toMatchObject({ result: 'not_eligible', course: 'B.Tech / B.E.' });
   });
 });
+
+describe('counsellor trend', () => {
+  it('counts new enquiries assigned to me per India-time day, with empty days as 0', async () => {
+    const w = await enquiryWorld();
+    const me = await makeCounsellor(w, 'trend@example.com');
+    const { id } = await submitEnquiry(w);
+    expect((await w.admin.c.patch(`/api/admin/enquiries/${id}`, { assignedTo: me.id })).status).toBe(200);
+    const res = await me.c.get('/api/counsellor/trend?days=7');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(7);
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+    expect(res.body.data[6]).toEqual({ day: today, count: 1 });
+    expect(res.body.data.slice(0, 6).every((d: { count: number }) => d.count === 0)).toBe(true);
+    expect((await me.c.get('/api/counsellor/trend?days=99')).status).toBe(422);
+    // Students and visitors cannot read it.
+    expect((await w.student.c.get('/api/counsellor/trend')).status).toBe(403);
+    expect((await request(app).get('/api/counsellor/trend')).status).toBe(401);
+  });
+});

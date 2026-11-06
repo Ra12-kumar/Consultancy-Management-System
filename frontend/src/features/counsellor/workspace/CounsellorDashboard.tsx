@@ -61,6 +61,7 @@ function Stat({ icon, tint, value, label, chip, chipTone, href }: { icon: IconNa
 
 // Line chart of new enquiries assigned per day (IST), with the last point labelled.
 function TrendChart({ days }: { days: Array<{ day: string; count: number }> }) {
+  if (days.length === 0) return <p className="flex h-48 items-center justify-center text-xs text-slate-500">No data for this period yet.</p>;
   const W = 560, H = 190, L = 28, R = 12, T = 22, B = 26;
   const max = Math.max(4, ...days.map((d) => d.count));
   const step = Math.ceil(max / 4);
@@ -162,19 +163,8 @@ export default function CounsellorDashboard() {
     [weekStart],
   );
   const openList = useApiData((signal) => api<AdminEnquiryRow[]>("GET", "/counsellor/enquiries?open=yes&sort=activity&limit=1", { signal }), []);
-  // New enquiries assigned per IST day: one count per day from the existing date filter.
-  const trend = useApiData(
-    async (signal) =>
-      Promise.all(
-        Array.from({ length: range }, (_, i) => addDays(today, i - range + 1)).map(async (day) => {
-          const from = dayStart(day).toISOString();
-          const to = new Date(dayStart(addDays(day, 1)).getTime() - 1).toISOString();
-          const r = await api<unknown[]>("GET", `/counsellor/enquiries?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&limit=1`, { signal });
-          return { day, count: (r.meta as Meta | undefined)?.total ?? 0 };
-        }),
-      ),
-    [range, today],
-  );
+  // New enquiries assigned per India-time day, counted by the server in one request.
+  const trend = useApiData((signal) => apiGet<Array<{ day: string; count: number }>>(`/counsellor/trend?days=${range}`, { signal }), [range]);
 
   // Ticks are kept on this device, per counsellor and day.
   const tickKey = `udaan.counsellor.tasks.${user?.id ?? "me"}.${today}`;

@@ -14,10 +14,14 @@ const lead = { id: "l1", name: "Ram", mobile: "+917323891747", role: "student", 
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
-  vi.mocked(apiGet).mockResolvedValue({ assignedOpen: 12, assignedTotal: 28, converted: 12, followUpsToday: 1, followUpsOverdue: 0 } as never);
+  vi.mocked(apiGet).mockImplementation(((path: string) =>
+    Promise.resolve(
+      path.startsWith("/counsellor/trend")
+        ? Array.from({ length: 7 }, (_, i) => ({ day: `2026-11-0${i + 1}`, count: 2 }))
+        : { assignedOpen: 12, assignedTotal: 28, converted: 12, followUpsToday: 1, followUpsOverdue: 0 },
+    )) as never);
   vi.mocked(api).mockImplementation(((_m: string, path: string) => {
     if (path.startsWith("/counsellor/callback-leads")) return Promise.resolve({ data: [lead], meta: { total: 1, new: 1 } });
-    if (path.includes("from=")) return Promise.resolve({ data: [], meta: { total: 2 } });
     if (path.includes("quick=overdue")) return Promise.resolve({ data: [], meta: { total: 0 } });
     return Promise.resolve({ data: [row], meta: { total: 1 } });
   }) as never);
@@ -29,8 +33,8 @@ describe("counsellor dashboard", () => {
     expect(await screen.findByText("Total Enquiries")).toBeInTheDocument();
     expect(await screen.findByText("+14 in 7 days")).toBeInTheDocument(); // 7 days × 2
     expect(screen.getByText("43%")).toBeInTheDocument(); // 12 of 28 admitted
-    // Each day is counted with the existing date filter (from/to), in India time.
-    expect(vi.mocked(api).mock.calls.filter(([, p]) => (p as string).includes("from=")).length).toBe(7);
+    // The 7 daily counts come from one request.
+    expect(vi.mocked(apiGet)).toHaveBeenCalledWith("/counsellor/trend?days=7", expect.anything());
     const tasks = screen.getByRole("region", { name: "Today’s Tasks" });
     expect(within(tasks).getByText("Call back Ram (+917323891747)")).toBeInTheDocument();
     expect(within(tasks).getByText("Follow up with Asha Verma")).toBeInTheDocument();

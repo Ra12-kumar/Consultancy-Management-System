@@ -21,6 +21,8 @@ export const eligibilityBody = z.object({ offerings: z.array(objectIdSchema).min
 const followUpBody = z.object({ followUpAt: z.coerce.date().nullable() }).strict();
 
 counsellorRouter.get('/summary', async (req: Request, res: Response) => sendSuccess(res, await counsellor.counsellorSummary(req.user!.id)));
+// New enquiries assigned to me per India-time day (dashboard chart).
+counsellorRouter.get('/trend', validate({ query: z.object({ days: z.coerce.number().int().min(1).max(31).default(7) }).strict() }), async (req, res) => sendSuccess(res, await counsellor.counsellorTrend(req.user!.id, (val(req).query as { days: number }).days)));
 counsellorRouter.get('/enquiries', validate({ query: v.adminEnquiriesQuery }), async (req, res) => {
   const { items, meta } = await counsellor.listMine(req, val(req).query);
   sendSuccess(res, items, { meta });

@@ -38,6 +38,11 @@ const GROUPS: WorkspaceGroup[] = [
   },
 ];
 
+// Signed-in area: every page renders only after the client-side session check, so Next.js cannot pre-render it
+// for its development-time instant-navigation check (it reports the page as dropped). The check is switched off
+// for this whole area; a layout-level `instant = false` would still check each page below it.
+export const instant = { unstable_disableValidation: true };
+
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   // Suspense: the shell reads the pathname, which is request-time data on dynamic routes such as /admin/colleges/[id].
   return (

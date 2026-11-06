@@ -254,3 +254,19 @@ export async function sendFollowUpDigests(now = new Date()) {
   }
   return sent;
 }
+
+// New enquiries assigned to this counsellor per India-time day, for the last `days` days (oldest first, days with
+// none included as 0). One aggregation instead of one request per day.
+export async function counsellorTrend(userId: string, days: number) {
+  const { start } = admin.istDay();
+  const since = new Date(start.getTime() - (days - 1) * 86_400_000);
+  const rows = await EnquiryModel.aggregate<{ _id: string; count: number }>([
+    { $match: { assignedTo: oid(userId), createdAt: { $gte: since } } },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Kolkata' } }, count: { $sum: 1 } } },
+  ]);
+  const byDay = new Map(rows.map((r) => [r._id, r.count]));
+  return Array.from({ length: days }, (_, i) => {
+    const day = new Date(since.getTime() + i * 86_400_000 + 330 * 60_000).toISOString().slice(0, 10);
+    return { day, count: byDay.get(day) ?? 0 };
+  });
+}

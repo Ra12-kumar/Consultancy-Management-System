@@ -33,4 +33,6 @@ The error format was kept as `{ error: { code, message } }` rather than the flat
 | `GET /api/counsellor/callback-leads` | Counsellor | Requests assigned to me |
 | `PATCH /api/counsellor/callback-leads/:id` | Counsellor | `status` and `note` of my own requests (others answer 404) |
 | `GET /api/colleges/explore?order=name` | Public | New optional A–Z sort for the college finder |
+| `GET /api/counsellor/trend?days=7` | Counsellor | New enquiries assigned to me per India-time day (1–31 days), for the dashboard chart |
+| `GET /api/admin/enquiries?followUpFrom=&followUpTo=` (and the counsellor list) | As the list | Optional follow-up date range (used by the counsellor calendar) |
 | `GET /api/health/ready` | Public | Now also reports `cache: disabled \| connected \| unavailable` |

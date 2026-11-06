@@ -60,6 +60,20 @@ The dashboard summary runs about 20 counts and aggregations per request. Under l
 
 Trade-off: dashboard figures can be up to 20 seconds old.
 
+## Fewer API requests per page (frontend, measured 2026-11-03)
+
+API requests made while a page loads, counted in the **production build** (`next start`) with the browser's network log:
+
+| Page | Before | After | What changed |
+|---|---|---|---|
+| Counsellor dashboard | 16 | **10** | The 7 or 14 per-day counts for the trend chart now come from one request (`GET /api/counsellor/trend?days=N`, one MongoDB aggregation) |
+| Counsellor My Enquiries | 8 | 8 | No duplicates found |
+| Admin dashboard | 3 | 3 | No duplicates found |
+
+The API client also **shares identical GET requests that are in flight at the same moment.** For example, the side menu and the page both load the counsellor summary and the callback count. Each shared request goes out once. Nothing is cached after the answer arrives, so data is never stale. Each caller can still cancel its own wait, and the network request is cancelled only when no caller is left (`frontend/src/services/api.ts`, tested in `api.test.ts`).
+
+In development, React deliberately mounts components twice, so the browser shows cancelled-and-repeated requests. That's expected and doesn't happen in production.
+
 ## Not measured (and why)
 
 - **Redis cache hit ratio under load:** Redis wasn't reachable this run (see setup). The cache's behaviour (MISS → HIT → MISS after an admin change, BYPASS without Redis) is proven by `backend/tests/redis.test.ts`. The `cache_hits` and `cache_misses` counters in `loadtest/k6.js` report the ratio when the script is pointed at the scaled stack (`BASES=http://127.0.0.1:8088`).

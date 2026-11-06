@@ -4,11 +4,13 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Alert, Skeleton } from "@/components/ui/Feedback";
+import { Alert } from "@/components/ui/Feedback";
 import { Icon, type IconName } from "@/features/admin/workspace/icons";
 import { homeFor, useAuth } from "@/features/auth/AuthProvider";
 import { useApiData } from "@/hooks/useApiData";
 import { api, apiGet } from "@/services/api";
+import { counsellorChrome } from "./chrome";
+import CounsellorLoading from "./CounsellorLoading";
 
 // Counsellor workspace frame from the client design ("Counsellor Dashboard"): a deep-purple side panel with the
 // counsellor's card, sections with live counts and a "Browse courses" prompt; a top bar with the page title,
@@ -38,11 +40,6 @@ const TITLES: Record<string, [string, string]> = {
   "/counsellor/settings": ["Settings", "Your account, password and sign-in security."],
 };
 
-// The site header and footer are hidden here, and the counsellor area always uses the light colour tokens (the
-// design is light; without this, shared components follow the device's dark mode and become unreadable on the
-// light background).
-const hideSiteChrome = `body:has(#counsellor-workspace) > header, body:has(#counsellor-workspace) > footer, body:has(#counsellor-workspace) > [aria-label="Announcements"] { display: none; }
-#counsellor-workspace { color-scheme: light; --background: #f5f7fb; --foreground: #0b1f44; --surface: #ffffff; --surface-2: #eef2f9; --line: #dde3ee; --muted: #4a5672; --primary: #0b1f44; --primary-fg: #ffffff; --accent: #c9a227; --accent-fg: #0b1f44; --accent-text: #8a6d0f; --success: #15803d; --warning: #a16207; --danger: #b91c1c; --ring: #c9a227; }`;
 const initial = (name: string) => name.trim().charAt(0).toUpperCase() || "C";
 
 function Photo({ name, src, size = 40 }: { name: string; src?: string | null; size?: number }) {
@@ -84,14 +81,8 @@ export default function CounsellorWorkspaceShell({ children }: { children: React
   // eslint-disable-next-line react-hooks/set-state-in-effect -- close the phone menu after navigation
   useEffect(() => setMenuOpen(false), [pathname, params]);
 
-  if (status !== "signedIn" || !user) {
-    return (
-      <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="mt-6 h-64" />
-      </main>
-    );
-  }
+  // While the sign-in check runs (and on a refresh) show the same frame with placeholders, never the public site.
+  if (status !== "signedIn" || !user) return <CounsellorLoading />;
   if (!isCounsellor) {
     return (
       <main id="main" className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6">
@@ -186,7 +177,7 @@ export default function CounsellorWorkspaceShell({ children }: { children: React
 
   return (
     <div id="counsellor-workspace" className="flex min-h-screen w-full flex-1 bg-[#f6f5fc] text-slate-900">
-      <style>{hideSiteChrome}</style>
+      <style>{counsellorChrome}</style>
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 lg:block">{sidebar}</aside>
       {menuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
