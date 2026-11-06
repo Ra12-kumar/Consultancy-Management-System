@@ -20,6 +20,7 @@ const GROUPS: WorkspaceGroup[] = [
     items: [
       { href: "/admin/colleges", label: "Colleges", icon: "colleges", permissions: ["catalog.manage", "pricing.manage"] },
       { href: "/admin/courses", label: "Courses", icon: "courses", permission: "catalog.manage" },
+      { href: "/admin/online-programs", label: "Online UG & PG", icon: "globe" },
       { href: "/admin/scholarships", label: "Scholarships", icon: "scholarships", permission: "scholarships.manage" },
       { href: "/admin/scholarship-applications", label: "Scholarship applications", icon: "applications", permission: "scholarships.manage" },
       { href: "/admin/admissions", label: "Admissions", icon: "admissions", permission: "enquiries.manage" },
