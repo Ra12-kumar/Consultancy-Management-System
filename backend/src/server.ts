@@ -8,6 +8,8 @@ import { startAppointmentReminders, stopAppointmentReminders } from './services/
 import { kickImports, recoverInterruptedImports } from './services/directory/importJob.service.js';
 import { startEmailWorker, stopEmailWorker } from './services/emailWorker.js';
 import { loadTemplateOverrides } from './services/settings.service.js';
+import { explorerColleges } from './services/collegeExplorer.service.js';
+import { scheduleWebsiteChecks } from './services/websiteHealth.service.js';
 import { logger } from './utils/logger.js';
 
 let server: Server | null = null;
@@ -59,6 +61,8 @@ async function start() {
   await loadTemplateOverrides();
   startEmailWorker();
   startAppointmentReminders();
+  // College finder websites: verified in the background when never checked or older than 14 days.
+  void scheduleWebsiteChecks(explorerColleges);
   // College directory imports: release jobs a restart interrupted, then run anything queued.
   await recoverInterruptedImports();
   kickImports();

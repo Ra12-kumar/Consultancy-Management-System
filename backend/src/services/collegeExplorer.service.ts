@@ -3,6 +3,7 @@ import path from 'node:path';
 import { env } from '../config/env.js';
 import { CourseModel } from '../models/Course.js';
 import { logger } from '../utils/logger.js';
+import { verifiedWebsite, websiteHealthReady } from './websiteHealth.service.js';
 
 // Real-time college finder over India's higher-education institutions listed on Wikidata (CC0 data:
 // name, city/district, state, institution type and official website). The list is fetched once with a few
@@ -271,6 +272,7 @@ export async function exploreColleges(query: ExplorerQuery) {
   const source = { name: 'Wikidata', url: 'https://www.wikidata.org', licence: 'CC0', fetchedAt: data?.fetchedAt ?? null };
   if (!data) return { status: 'loading' as const, branch: branch ?? null, items: [], total: 0, page: 1, totalPages: 1, states: [], cities: [], source };
 
+  await websiteHealthReady();
   const words = norm(query.q ?? '').split(' ').filter(Boolean);
   const state = query.state ? norm(query.state) : '';
   const city = query.city ? norm(query.city) : '';
@@ -292,7 +294,7 @@ export async function exploreColleges(query: ExplorerQuery) {
     const hay = ` ${norm(`${c.name} ${c.city} ${c.state}`)} `;
     return words.every((w) => hay.includes(` ${w} `) || (ABBREVIATIONS[w] !== undefined && hay.includes(` ${ABBREVIATIONS[w]} `)));
   };
-  const rank = (c: ExplorerCollege) => (name0 && !whole(c) ? 4 : 0) + (name0 && norm(c.name).startsWith(name0) ? 0 : 2) + (c.website ? 0 : 1);
+  const rank = (c: ExplorerCollege) => (name0 && !whole(c) ? 4 : 0) + (name0 && norm(c.name).startsWith(name0) ? 0 : 2) + (verifiedWebsite(c.name, c.website) ? 0 : 1);
   if (query.order === 'name') matches.sort((a, b) => a.name.localeCompare(b.name));
   else matches.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 
@@ -300,5 +302,13 @@ export async function exploreColleges(query: ExplorerQuery) {
   const page = Math.min(query.page, totalPages);
   const states = [...new Set(data.colleges.map((c) => c.state).filter(Boolean))].sort();
   const cities = state ? [...new Set(inState.map((c) => c.city).filter(Boolean))].sort() : [];
-  return { status: 'ready' as const, branch: branch ?? null, items: matches.slice((page - 1) * query.limit, page * query.limit), total: matches.length, page, totalPages, states, cities, source };
+  return { status: 'ready' as const, branch: branch ?? null, // Only verified official websites are shown (see websiteHealth.service).
+    items: matches.slice((page - 1) * query.limit, page * query.limit).map((c) => ({ ...c, website: verifiedWebsite(c.name, c.website) })),
+    total: matches.length, page, totalPages, states, cities, source };
+}
+
+// Every college with its website as listed on Wikidata (for the website checker).
+export async function explorerColleges() {
+  await ensureLoaded();
+  return data?.colleges ?? [];
 }
