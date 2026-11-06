@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/Feedback";
+import AdminLoading from "@/features/admin/workspace/AdminLoading";
 import AdminWorkspaceShell, { type WorkspaceGroup } from "@/features/admin/workspace/AdminWorkspaceShell";
 
 // Grouped as in the client design ("Udaan admin dashboard"); every admin page stays reachable. The previous
@@ -46,7 +46,7 @@ export const instant = { unstable_disableValidation: true };
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   // Suspense: the shell reads the pathname, which is request-time data on dynamic routes such as /admin/colleges/[id].
   return (
-    <Suspense fallback={<main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6"><Skeleton className="h-64" /></main>}>
+    <Suspense fallback={<AdminLoading />}>
       <AdminWorkspaceShell groups={GROUPS}>{children}</AdminWorkspaceShell>
     </Suspense>
   );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Alert, Skeleton } from "@/components/ui/Feedback";
+import { Alert } from "@/components/ui/Feedback";
 import { homeFor, useAuth } from "@/features/auth/AuthProvider";
 import { useApiData } from "@/hooks/useApiData";
 import { apiGet } from "@/services/api";
@@ -21,7 +21,8 @@ type Counts = { students: number; newEnquiries: number };
 type SummaryCounts = { totals?: { students: number }; students: { total: number }; charts: { byStatus: Array<{ status: EnquiryStatus; count: number }> } };
 
 const BASE = "/admin";
-const hideSiteChrome = `body:has(#admin-workspace) > header, body:has(#admin-workspace) > footer, body:has(#admin-workspace) > [aria-label="Announcements"] { display: none; }`;
+import { adminChrome } from "./chrome";
+import AdminLoading from "./AdminLoading";
 
 function Brand() {
   return (
@@ -71,14 +72,8 @@ export default function AdminWorkspaceShell({ groups, children }: { groups: Work
   // eslint-disable-next-line react-hooks/set-state-in-effect -- close the drawer on navigation
   useEffect(() => setMenuOpen(false), [pathname]);
 
-  if (status !== "signedIn" || !user) {
-    return (
-      <main id="main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="mt-6 h-64" />
-      </main>
-    );
-  }
+  // While the sign-in check runs (and on a refresh) show the admin frame with placeholders, never the public site.
+  if (status !== "signedIn" || !user) return <AdminLoading />;
   if (user.role !== "admin") {
     return (
       <main id="main" className="mx-auto w-full max-w-3xl flex-1 px-4 py-12 sm:px-6">
@@ -159,7 +154,7 @@ export default function AdminWorkspaceShell({ groups, children }: { groups: Work
 
   return (
     <div id="admin-workspace" className="flex min-h-screen w-full flex-1 bg-background text-foreground">
-      <style>{hideSiteChrome}</style>
+      <style>{adminChrome}</style>
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-line bg-surface lg:block">{sidebar}</aside>
       {menuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
