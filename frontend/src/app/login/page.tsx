@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
-import LoginForm from "@/features/auth/LoginForm";
-import AuthCard from "@/features/auth/AuthCard";
 import { Spinner } from "@/components/ui/Feedback";
+import LoginForm from "@/features/auth/LoginForm";
+import SignInFrame from "@/features/auth/SignInFrame";
 
 export const metadata: Metadata = { title: "Sign in" };
 
+// Sign-in in a focused frame (no site navigation bar). The sign-in form itself (LoginForm) is unchanged; the shared
+// AuthCard is still used by registration and the password pages.
 export default function Page() {
   return (
-    <AuthCard
-      title="Sign in"
-      subtitle="Students and administrators sign in here."
-      footer={<>New here? <Link href="/register" className="font-semibold text-accent-text hover:underline">Create a student account</Link></>}
-    >
+    <SignInFrame>
       <Suspense fallback={<Spinner />}>
         <LoginForm />
       </Suspense>
-    </AuthCard>
+    </SignInFrame>
   );
 }
