@@ -53,6 +53,25 @@ paymentRouter.post(
 // ---- Admin (mounted inside /api/admin) ----
 export const adminStage7Router = Router();
 const settings = requirePermission('settings.manage');
+// A Google Maps link to the office (https, Google Maps addresses only), or empty.
+const mapsUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((v) => {
+    if (v === '') return true;
+    try {
+      const u = new URL(v);
+      const host = u.hostname.toLowerCase().replace(/^www\./, '');
+      if (u.protocol !== 'https:') return false;
+      if (/^maps\.google\.[a-z.]+$/.test(host) || host === 'maps.app.goo.gl') return true;
+      return (/^google\.[a-z.]+$/.test(host) || host === 'goo.gl') && u.pathname.startsWith('/maps');
+    } catch {
+      return false;
+    }
+  }, 'Use the full https:// Google Maps link (Share → Copy link in Google Maps)');
+// Phone and WhatsApp numbers: digits with an optional leading +, spaces, hyphens or brackets.
+const phone = text(30).refine((v) => v === '' || /^\+?[0-9][0-9 ()-]{5,24}$/.test(v), 'Use a phone number such as +91 98765 43210');
 const content = requirePermission('content.manage');
 const payments = requirePermission('payments.manage');
 
@@ -64,7 +83,7 @@ adminStage7Router.put(
     body: z
       .object({
         organisation: z
-          .object({ name: text(120), supportEmail: z.union([z.literal(''), z.string().trim().toLowerCase().email().max(254)]), supportPhone: text(30), whatsapp: text(30), address: text(400), officeHours: text(200), instagram: socialUrl('instagram'), facebook: socialUrl('facebook') })
+          .object({ name: text(120), supportEmail: z.union([z.literal(''), z.string().trim().toLowerCase().email().max(254)]), supportPhone: phone, whatsapp: phone, address: text(400), officeHours: text(200), instagram: socialUrl('instagram'), facebook: socialUrl('facebook'), contactPerson: text(120), mapsUrl, linkedin: socialUrl('linkedin'), youtube: socialUrl('youtube'), x: socialUrl('x') })
           .partial()
           .strict()
           .default({}),

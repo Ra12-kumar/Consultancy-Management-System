@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- small local SVG icons from the client design */
 import { Inter, Libre_Baskerville } from "next/font/google";
 import Link from "next/link";
+import FooterContact from "@/features/content/FooterContact";
 
 // Header and compact footer for Udaan pages other than the landing page (client Figma design
 // "Udaan · Colleges in Bengaluru"). Section links point back to the landing page at "/".
@@ -99,6 +100,8 @@ export function UdanFooter() {
           ))}
         </nav>
       </div>
+      {/* Admin → Contact information (shown only when details are saved). */}
+      <FooterContact className="mt-8 border-t border-[#375066] pt-6" />
       <div className="mt-8 flex flex-col gap-3 border-t border-[#375066] pt-5 text-[11px] sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
           <p>© 2026 Udaan. All rights reserved.</p>

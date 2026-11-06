@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FooterContact from "@/features/content/FooterContact";
 import SocialLinks from "@/features/content/SocialLinks";
 
 const columns = [
@@ -34,6 +35,8 @@ export default function SiteFooter() {
           </nav>
         ))}
       </div>
+      {/* Admin → Contact information (shown only when details are saved). */}
+      <FooterContact social={["linkedin", "youtube", "x"]} className="mx-auto max-w-7xl border-t border-white/10 px-4 py-8 sm:px-6" />
       <div className="border-t border-white/10">
         <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-white/60 sm:px-6">
           Official college fees and consultancy service charges are always shown separately. Admission and scholarships are decided by the institutions and scholarship providers.

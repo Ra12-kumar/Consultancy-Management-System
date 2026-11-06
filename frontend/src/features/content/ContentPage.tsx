@@ -9,7 +9,7 @@ import { SafeMarkdown } from "@/lib/markdown";
 import { apiGet } from "@/services/api";
 
 export type Page = { slug: string; title: string; intro: string; body: string; faqs: Array<{ question: string; answer: string }>; updatedAt: string | null };
-export type SiteInfo = { organisation: { name: string; supportEmail: string; supportPhone: string; whatsapp: string; address: string; officeHours: string; instagram?: string; facebook?: string }; banners: Array<{ id: string; title: string; body: string }>; payments: { enabled: boolean } };
+export type SiteInfo = { organisation: { name: string; supportEmail: string; supportPhone: string; whatsapp: string; address: string; officeHours: string; instagram?: string; facebook?: string; contactPerson?: string; mapsUrl?: string; linkedin?: string; youtube?: string; x?: string }; banners: Array<{ id: string; title: string; body: string }>; payments: { enabled: boolean } };
 
 type Fallback = { eyebrow: string; title: string; intro: string; points: string[] };
 

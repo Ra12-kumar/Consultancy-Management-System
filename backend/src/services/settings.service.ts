@@ -14,7 +14,7 @@ type Lean = Record<string, any> & { _id: mongoose.Types.ObjectId }; // eslint-di
 
 // ---- Organisation details (shown on the contact page and in the footer) ----
 
-const ORG_DEFAULTS = { name: '', supportEmail: '', supportPhone: '', whatsapp: '', address: '', officeHours: '', instagram: '', facebook: '' };
+const ORG_DEFAULTS = { name: '', supportEmail: '', supportPhone: '', whatsapp: '', address: '', officeHours: '', instagram: '', facebook: '', contactPerson: '', mapsUrl: '', linkedin: '', youtube: '', x: '' };
 
 export async function getSiteSettings() {
   const s = await SiteSettingsModel.findById('site').lean();

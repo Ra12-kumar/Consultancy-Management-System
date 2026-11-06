@@ -15,6 +15,12 @@ const siteSettingsSchema = new mongoose.Schema(
       // Official social media pages (footer and contact page).
       instagram: { type: String, trim: true, maxlength: 300, default: '' },
       facebook: { type: String, trim: true, maxlength: 300, default: '' },
+      // Admin → Contact information: shown in the website footers' Contact us section.
+      contactPerson: { type: String, trim: true, maxlength: 120, default: '' },
+      mapsUrl: { type: String, trim: true, maxlength: 500, default: '' },
+      linkedin: { type: String, trim: true, maxlength: 300, default: '' },
+      youtube: { type: String, trim: true, maxlength: 300, default: '' },
+      x: { type: String, trim: true, maxlength: 300, default: '' },
     },
     // Enquiry handling: automatic assignment of new enquiries to the least busy active counsellor.
     crm: { autoAssign: { type: Boolean, default: false } },

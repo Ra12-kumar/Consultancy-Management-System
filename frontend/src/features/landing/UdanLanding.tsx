@@ -3,6 +3,7 @@ import { Inter, Libre_Baskerville } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import FooterContact from "@/features/content/FooterContact";
 import UdanCallbackForm from "./UdanCallbackForm";
 import UdanSearch from "./UdanSearch";
 
@@ -486,6 +487,8 @@ export default function UdanLanding() {
             ))}
           </div>
         </div>
+        {/* Admin → Contact information (shown only when details are saved). */}
+        <FooterContact className="mt-11 border-t border-[#375066] pt-8" />
         <div className="mt-11 space-y-5 border-t border-[#375066] pt-5 text-[11px]">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p>© 2026 Udaan. All rights reserved.</p>

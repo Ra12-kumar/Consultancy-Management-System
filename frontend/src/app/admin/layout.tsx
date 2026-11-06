@@ -34,6 +34,7 @@ const GROUPS: WorkspaceGroup[] = [
       { href: "/admin/email", label: "Email notifications", icon: "email", permission: "email.view" },
       { href: "/admin/feedback", label: "Feedback", icon: "feedback", permission: "feedback.manage" },
       { href: "/admin/data-requests", label: "Data requests", icon: "privacy", permission: "privacy.manage" },
+      { href: "/admin/contact-information", label: "Contact information", icon: "phone", permission: "settings.manage" },
       { href: "/admin/settings", label: "Settings", icon: "settings" },
     ],
   },
