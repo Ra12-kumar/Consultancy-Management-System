@@ -67,4 +67,16 @@ describe("Udaan college finder", () => {
     expect(compare).toBeEnabled();
     expect(JSON.parse(sessionStorage.getItem("udan.compare")!)).toHaveLength(2);
   });
+
+  it("filters by teacher-education course (D.El.Ed, B.Ed, M.Ed) and shows it on the heading and cards", async () => {
+    nav.params = new URLSearchParams("teacher=bed&q=Bengaluru");
+    render(<UdanColleges />);
+    expect(await screen.findByRole("heading", { name: "B.Ed colleges in Bengaluru" })).toBeInTheDocument();
+    expect(apiGet).toHaveBeenCalledWith("/colleges/explore?q=Bengaluru&teacher=bed", expect.anything());
+    expect(screen.getAllByText("B.Ed", { selector: "span" }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/recognised from the college name/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Course" }), "med");
+    expect(nav.replace).toHaveBeenLastCalledWith("/colleges?q=Bengaluru&teacher=med", { scroll: false });
+    nav.params = new URLSearchParams("q=Bengaluru");
+  });
 });

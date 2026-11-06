@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { CourseModel } from '../src/models/Course.js';
-import { buildColleges, setExplorerClient } from '../src/services/collegeExplorer.service.js';
+import { buildColleges, offersTeacherCourse, setExplorerClient } from '../src/services/collegeExplorer.service.js';
 import { client, useTestDb } from './helpers.js';
 
 useTestDb();
@@ -92,5 +92,28 @@ describe('college finder', () => {
     const res = await client().get('/api/colleges/explore?q=iit');
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ status: 'loading', items: [], total: 0 });
+  });
+});
+
+describe('teacher-education courses (from the college name)', () => {
+  it('recognises D.El.Ed, B.Ed and M.Ed colleges and not look-alikes', () => {
+    expect(offersTeacherCourse('A N B.Ed. College, Jaipur', 'bed')).toBe(true);
+    expect(offersTeacherCourse('A.J. College of Education, Krishna', 'bed')).toBe(true);
+    expect(offersTeacherCourse('Adinath Mahila Teachers Training College, Udaipur', 'bed')).toBe(true);
+    expect(offersTeacherCourse('Acharya Shriram D.Ed B.Ed College, Bamangaon', 'deled')).toBe(true);
+    expect(offersTeacherCourse('District Institute of Education and Training, Navsari', 'deled')).toBe(true);
+    expect(offersTeacherCourse('DIET Siwan', 'deled')).toBe(true);
+    expect(offersTeacherCourse('Anjuman Education Trust M.Ed. College', 'med')).toBe(true);
+    expect(offersTeacherCourse('Institute of Advanced Study In Education, Bhopal', 'med')).toBe(true);
+    // Not teacher-education colleges.
+    for (const name of ['College of Engineering, Pune', 'Government Medical College, Nagpur', 'Bedi Institute of Management', 'Medicaps University', 'Dietary Sciences Institute']) {
+      expect(offersTeacherCourse(name, 'bed'), name).toBe(false);
+      expect(offersTeacherCourse(name, 'med'), name).toBe(false);
+      expect(offersTeacherCourse(name, 'deled'), name).toBe(false);
+    }
+  });
+
+  it('refuses unknown teacher courses', async () => {
+    expect((await client().get('/api/colleges/explore?teacher=phd')).status).toBe(422);
   });
 });

@@ -15,7 +15,9 @@ import { UdanFooter, UdanHeader, hideSiteChrome, udanDisplay, udanFonts, udanGut
 // (GET /api/colleges/explore) with a search card, study-area filter, result cards, a side-by-side
 // comparison of up to three colleges and numbered pages.
 
-export const UDAN_FINDER_KEYS = [...FINDER_KEYS, "order"];
+export const UDAN_FINDER_KEYS = [...FINDER_KEYS, "order", "teacher"];
+// Teacher-education courses (the finder recognises them from the college name).
+export const TEACHER_COURSES = { deled: "D.El.Ed", bed: "B.Ed", med: "M.Ed" } as const;
 const PER_PAGE = 24;
 const MAX_PAGE = 500; // the API's page limit
 const COMPARE_MAX = 3;
@@ -102,11 +104,11 @@ function Chip({ children, onRemove, name }: { children: ReactNode; onRemove: () 
   );
 }
 
-function CollegeCard({ c, branchLabels, compared, onCompare, compareFull }: { c: FinderCollege; branchLabels: Record<string, string>; compared: boolean; onCompare: () => void; compareFull: boolean }) {
+function CollegeCard({ c, branchLabels, compared, onCompare, compareFull, courseLabel }: { c: FinderCollege; branchLabels: Record<string, string>; compared: boolean; onCompare: () => void; compareFull: boolean; courseLabel?: string }) {
   const site = safeHref(c.website);
   const place = [c.city, c.state].filter(Boolean).join(", ");
   const first = c.branches[0];
-  const subject = first === "university" ? "programmes across many subjects" : first && branchLabels[first] ? `${branchLabels[first].toLowerCase()} programmes` : "programmes";
+  const subject = courseLabel ? `${courseLabel} programmes` : first === "university" ? "programmes across many subjects" : first && branchLabels[first] ? `${branchLabels[first].toLowerCase()} programmes` : "programmes";
   const enquire = `/enquire?collegeName=${encodeURIComponent(place ? `${c.name}, ${c.city || c.state}` : c.name)}&source=college_search`;
   return (
     <article className="rounded-[10px] border border-[#dfe3e5] bg-white p-4 sm:p-5">
@@ -122,6 +124,7 @@ function CollegeCard({ c, branchLabels, compared, onCompare, compareFull }: { c:
               <img src="/udan/map-pin.svg" alt="" width={14} height={14} />
               {place || "Location not listed"}
             </span>
+            {courseLabel && <span className="rounded bg-[#10283f] px-2 py-0.5 text-[11px] font-semibold text-white">{courseLabel}</span>}
             {c.branches.slice(0, 2).map((b) => (
               <span key={b} className="rounded bg-[#faf0d6] px-2 py-0.5 text-[11px] font-medium text-[#6b5114]">
                 {branchLabels[b] ?? b}
@@ -245,11 +248,14 @@ export default function UdanColleges() {
   const states = data?.states ?? [];
   const qIsPlace = !!q && (norm(q) in PLACES || states.some((s) => norm(s) === norm(q)));
   const place = city || (qIsPlace ? q : "") || state;
-  const heading = place ? `Colleges in ${place}` : q ? `Colleges matching “${q}”` : "Colleges across India";
+  const teacher = (query.get("teacher") ?? "") as keyof typeof TEACHER_COURSES | "";
+  const course = teacher ? `${TEACHER_COURSES[teacher]} colleges` : "Colleges";
+  const heading = place ? `${course} in ${place}` : q ? `${course} matching “${q}”` : `${course} across India`;
   const photo = PLACES[norm(city || q || state)];
 
   const chips: Array<{ name: string; text: string; clear: Record<string, string> }> = [];
   if (q) chips.push({ name: "search", text: `Search: ${q}`, clear: { q: "" } });
+  if (teacher) chips.push({ name: "course", text: TEACHER_COURSES[teacher], clear: { teacher: "" } });
   if (branch) chips.push({ name: "study area", text: branchLabels[branch] ?? branch, clear: { branch: "", course: "" } });
   if (state) chips.push({ name: "state", text: state, clear: { state: "", city: "" } });
   if (city) chips.push({ name: "city", text: city, clear: { city: "" } });
@@ -323,13 +329,24 @@ export default function UdanColleges() {
             </figure>
           </div>
 
-          <form role="search" aria-label="Search colleges" onSubmit={submit} className="mt-8 grid gap-4 rounded-[10px] bg-white p-4 shadow-[0_8px_30px_rgba(16,40,63,0.08)] sm:grid-cols-2 sm:p-5 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] lg:items-end">
+          <form role="search" aria-label="Search colleges" onSubmit={submit} className="mt-8 grid gap-4 rounded-[10px] bg-white p-4 shadow-[0_8px_30px_rgba(16,40,63,0.08)] sm:grid-cols-2 sm:p-5 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
             <label className={label}>
               College name or place
               <span className="relative block">
                 <img src="/udan/search.svg" alt="" width={16} height={16} className="pointer-events-none absolute top-1/2 left-3 mt-[3px] -translate-y-1/2" />
                 <input type="search" autoComplete="off" placeholder="e.g. IIT Bombay, engineering Pune" value={text} onChange={(e) => setText(e.target.value)} maxLength={80} className={`${field} pl-9`} />
               </span>
+            </label>
+            <label className={label}>
+              Course
+              <select value={teacher} onChange={(e) => set({ teacher: e.target.value })} className={field}>
+                <option value="">All courses</option>
+                {Object.entries(TEACHER_COURSES).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className={label}>
               Branch
@@ -466,6 +483,7 @@ export default function UdanColleges() {
                           key={c.id}
                           c={c}
                           branchLabels={branchLabels}
+                          courseLabel={teacher ? TEACHER_COURSES[teacher] : undefined}
                           compared={compared}
                           compareFull={compare.length >= COMPARE_MAX}
                           onCompare={() => saveCompare(compared ? compare.filter((x) => x.id !== c.id) : [...compare, c])}
@@ -542,6 +560,7 @@ export default function UdanColleges() {
                 <path d="M12 11v5M12 8h0" />
               </svg>
               A good shortlist starts with current information. Confirm courses, eligibility, fees and deadlines on each institution’s official website before applying.
+              {teacher ? ` ${TEACHER_COURSES[teacher]} colleges are recognised from the college name (for example “B.Ed College” or “College of Education”), so the list may be incomplete; check the course with the college.` : ""}
               {data?.source ? " College list from Wikidata (CC0), community-maintained." : ""}
             </p>
           </section>

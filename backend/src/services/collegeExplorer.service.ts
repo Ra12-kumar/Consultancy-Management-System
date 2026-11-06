@@ -250,7 +250,18 @@ export async function branchForCourse(slug: string): Promise<Branch | null> {
   return course ? (CATEGORY_BRANCH[String(course.category ?? '').toLowerCase()] ?? null) : null;
 }
 
-export type ExplorerQuery = { q?: string; state?: string; city?: string; branch?: Branch; course?: string; order?: 'relevance' | 'name'; page: number; limit: number };
+// Teacher-education courses, recognised from the college name (Wikidata has no course list), the same way branches
+// are worked out. Matched on the normalised name (lower case, dots and punctuation as spaces).
+export const TEACHER_COURSES = { deled: 'D.El.Ed', bed: 'B.Ed', med: 'M.Ed' } as const;
+export type TeacherCourse = keyof typeof TEACHER_COURSES;
+const TEACHER_PATTERNS: Record<TeacherCourse, RegExp> = {
+  deled: /\bd ?el ?ed\b|\bd ?ed\b|\bdiet\b|district institute of education|teachers? training institute|\bbtc\b|\bjbt\b/,
+  bed: /\bb ?ed\b|college of (teacher )?education|teachers? training college|shikshan? mahavidyalaya/,
+  med: /\bm ?ed\b|institute of advanced stud(y|ies) in education|\biase\b/,
+};
+export const offersTeacherCourse = (name: string, course: TeacherCourse) => TEACHER_PATTERNS[course].test(norm(name));
+
+export type ExplorerQuery = { q?: string; state?: string; city?: string; branch?: Branch; course?: string; teacher?: TeacherCourse; order?: 'relevance' | 'name'; page: number; limit: number };
 
 export async function exploreColleges(query: ExplorerQuery) {
   // The first request waits for the list (a saved copy loads at once; a first-ever fetch takes a minute or two).
@@ -266,6 +277,7 @@ export async function exploreColleges(query: ExplorerQuery) {
   const inState = data.colleges.filter((c) => !state || norm(c.state) === state);
   const matches = inState.filter((c) => {
     if (branch && !c.branches.includes(branch)) return false;
+    if (query.teacher && !offersTeacherCourse(c.name, query.teacher)) return false;
     if (city && norm(c.city) !== city) return false;
     if (!words.length) return true;
     // Every word must appear in the name or place, so "pune engineering" and "iit bombay" both work;

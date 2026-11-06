@@ -349,6 +349,8 @@ export const explorerQuery = z
     course: slug.optional(),
     // Optional: "name" lists results A–Z instead of best match first.
     order: z.enum(['relevance', 'name']).optional(),
+    // Optional: teacher-education course (D.El.Ed, B.Ed, M.Ed), recognised from the college name.
+    teacher: z.enum(['deled', 'bed', 'med']).optional(),
     page: z.coerce.number().int().min(1).max(500).default(1),
     limit: z.coerce.number().int().min(6).max(48).default(24),
   })
