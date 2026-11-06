@@ -1,0 +1,1299 @@
+{
+  "about": "Universities shown in Admin > Online UG & PG. Online programmes: UGC-DEB list of HEIs and programmes entitled to offer online (OL) mode. Names, cities, websites and logos: each university's official website.",
+  "sources": {
+    "ugcDeb": "https://deb.ugc.ac.in/Home/HEI_Prog_List"
+  },
+  "researchedAt": "2026-11-06T14:45:21.155Z",
+  "universities": [
+    {
+      "key": "sharda",
+      "name": "Sharda University",
+      "slug": "sharda-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "greater-noida",
+      "website": "https://www.sharda.ac.in/",
+      "logoUrl": "https://www.sharda.ac.in/attachments/site_logo/logo22.png",
+      "aliases": [],
+      "ugcDeb": {
+        "listedAs": "Sharda University",
+        "state": "Uttar Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE (GENERAL)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (HONS.) (POLITICAL SCIENCE)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS (GENERAL)",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "parul",
+      "name": "Parul University",
+      "slug": "parul-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "vadodara",
+      "website": "https://www.paruluniversity.ac.in/",
+      "logoUrl": "https://www.paruluniversity.ac.in/wp-content/uploads/2026/09/Group-2.svg",
+      "aliases": [],
+      "ugcDeb": {
+        "listedAs": "Parul University",
+        "state": "Gujarat",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ENGLISH LANGUAGE TEACHING)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (APPLIED MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SOCIAL WORK",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "nmims",
+      "name": "SVKM's Narsee Monjee Institute of Management Studies (NMIMS)",
+      "slug": "nmims-mumbai",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "mumbai",
+      "website": "https://www.nmims.edu/",
+      "logoUrl": "https://www.nmims.edu/images/nmims-university-logo.png",
+      "aliases": [
+        "NMIMS"
+      ],
+      "ugcDeb": {
+        "listedAs": "SVKM's Narsee Monjee Institute of Management Studies",
+        "state": "Maharashtra",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (WORKING EXECUTIVE)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "jain",
+      "name": "JAIN (Deemed-to-be University)",
+      "slug": "jain-deemed-to-be-university",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "bengaluru",
+      "website": "https://www.jainuniversity.ac.in/",
+      "logoUrl": "https://www.jainuniversity.ac.in/jain/home/assets/images/jain-logo.png",
+      "aliases": [
+        "Jain University"
+      ],
+      "ugcDeb": {
+        "listedAs": "JAIN(Deemed-to- be University)",
+        "state": "Karnataka",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ECONOMICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JAINOLOGY, COMPARATIVE RELIGION & PHILOSOPHY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (PUBLIC POLICY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "vignan",
+      "name": "Vignan's Foundation for Science, Technology and Research",
+      "slug": "vignans-foundation-for-science-technology-and-research",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "guntur",
+      "website": "https://vignan.ac.in/",
+      "logoUrl": "https://vignan.ac.in/assets/images/logonew.png",
+      "aliases": [
+        "Vignan's University",
+        "VFSTR"
+      ],
+      "ugcDeb": {
+        "listedAs": "Vignan's Foundation for Science, Technology and Research",
+        "state": "Andhra Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (FINANCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (GENERAL)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (HR)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATION",
+          "level": "UG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (DATA SCIENCE)",
+          "level": ""
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "niu",
+      "name": "Noida International University",
+      "slug": "noida-international-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "greater-noida",
+      "website": "https://niu.edu.in/",
+      "logoUrl": "https://niu.edu.in/wp-content/uploads/2024/06/Asset-1-2.svg",
+      "aliases": [
+        "NIU"
+      ],
+      "ugcDeb": {
+        "listedAs": "Noida International University",
+        "state": "Uttar Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (INTERNATIONAL RELATIONS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (HONS)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "bdu",
+      "name": "Bharathidasan University",
+      "slug": "bharathidasan-university",
+      "type": "government",
+      "ownership": "government",
+      "category": "university",
+      "city": "tiruchirappalli",
+      "website": "https://www.bdu.ac.in/",
+      "logoUrl": "https://www.bdu.ac.in/images/emp.gif",
+      "aliases": [],
+      "ugcDeb": {
+        "listedAs": "Bharathidasan University",
+        "state": "Tamil Nadu",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ECONOMICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (HISTORY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (POLITICAL SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (PUBLIC ADMINISTRATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (TAMIL)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (ENGLISH)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (TAMIL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "amrita",
+      "name": "Amrita Vishwa Vidyapeetham",
+      "slug": "amrita-vishwa-vidyapeetham",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "coimbatore",
+      "website": "https://www.amrita.edu/",
+      "logoUrl": "https://webfiles.amrita.edu/2024/07/amrita-vishwa-vidyapeetham-university-logo-2024.jpg",
+      "aliases": [
+        "Amrita University"
+      ],
+      "ugcDeb": {
+        "listedAs": "Amrita Vishwa Vidyapeetham",
+        "state": "Tamil Nadu",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM AND MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (PHILOSOPHY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "gla",
+      "name": "GLA University",
+      "slug": "gla-university-mathura",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "mathura",
+      "website": "https://www.gla.ac.in/mathura",
+      "logoUrl": "https://www.gla.ac.in/public/uploads/mathura/page_section_attributes/green-logo-6a55bbd77a7ad-6a5b1549d6f4c.webp",
+      "aliases": [
+        "G.L.A. University"
+      ],
+      "ugcDeb": {
+        "listedAs": "G.L.A. University",
+        "state": "Uttar Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (HONS.)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "shoolini",
+      "name": "Shoolini University of Biotechnology and Management Sciences",
+      "slug": "shoolini-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "solan",
+      "website": "https://shooliniuniversity.com/",
+      "logoUrl": "https://shooliniuniversity.com/assets/images/logo.png",
+      "aliases": [
+        "Shoolini University"
+      ],
+      "ugcDeb": {
+        "listedAs": "Shoolini University of Biotechnology and Management Sciences",
+        "state": "Himachal Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ENGLISH LITERATURE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (DATA SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (HONS) (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "smu",
+      "name": "Sikkim Manipal University",
+      "slug": "sikkim-manipal-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "gangtok",
+      "website": "https://www.smu.edu.in/",
+      "logoUrl": "https://www.smu.edu.in/img/smu-logo.svg",
+      "aliases": [
+        "SMU"
+      ],
+      "ugcDeb": {
+        "listedAs": "Sikkim- Manipal University",
+        "state": "Sikkim",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (POLITICAL SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (SOCIOLOGY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE (GENERAL)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (COMBINATION OF 3 SUBJECTS)-ENGLISH, POLITICAL SCIENCE AND SOCIOLOGY",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (GENERAL)",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "vgu",
+      "name": "Vivekananda Global University",
+      "slug": "vivekananda-global-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "jaipur",
+      "website": "https://vgu.ac.in/",
+      "logoUrl": "https://vgu.ac.in/assets/images/vgu-logo-n.png",
+      "aliases": [
+        "VGU"
+      ],
+      "ugcDeb": {
+        "listedAs": "Vivekananda Global University",
+        "state": "Rajasthan",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (INTERNATIONAL FINANCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (COMBINATION OF 3 SUBJECTS) (ECONOMICS, POLITICAL SCIENCE, PUBLIC POLICY AND DEVELOPMENT, INTERNATIONAL RELATIONS, ENGLISH, HISTORY, COMPUTER APPLICATIONS)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATION",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "uu",
+      "name": "Uttaranchal University",
+      "slug": "uttaranchal-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "dehradun",
+      "website": "https://uudoon.in/",
+      "logoUrl": "https://uudoon.in/assets/images/UU-Logo-Naac-Nirf.webp",
+      "aliases": [],
+      "ugcDeb": {
+        "listedAs": "Uttaranchal University",
+        "state": "Uttarakhand",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "jh",
+      "name": "Jamia Hamdard",
+      "slug": "jamia-hamdard",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "new-delhi",
+      "website": "https://jamiahamdard.ac.in/",
+      "logoUrl": "https://www.jamiahamdard.ac.in/assets/mainpage/assets/imgs/hamdardLogo-16.png",
+      "aliases": [],
+      "ugcDeb": {
+        "listedAs": "Jamia Hamdard",
+        "state": "Delhi",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ISLAMIC STUDIES)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (POLITICAL SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (ISLAMIC STUDIES)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "jindal",
+      "name": "O.P. Jindal Global University",
+      "slug": "op-jindal-global-university",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "sonipat",
+      "website": "https://jgu.edu.in/",
+      "logoUrl": "https://jgu.edu.in/front/assets/img/blue-logo.webp",
+      "aliases": [
+        "JGU"
+      ],
+      "ugcDeb": {
+        "listedAs": "O.P JINDAL GLOBAL UNIVERSITY",
+        "state": "HARYANA",
+        "session": "2022-23",
+        "current": false
+      },
+      "programmes": [],
+      "lastListedProgrammes": [
+        {
+          "name": "MASTER OF ARTS (PUBLIC POLICY)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        }
+      ]
+    },
+    {
+      "key": "dypp",
+      "name": "Dr. D. Y. Patil Vidyapeeth, Pune",
+      "slug": "dr-d-y-patil-vidyapeeth-pune",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "pune",
+      "website": "https://dpu.edu.in/",
+      "logoUrl": "https://dpu.edu.in/assets/img/logo-01.png?v=12345",
+      "aliases": [
+        "DPU"
+      ],
+      "ugcDeb": {
+        "listedAs": "DR. D.Y. PATIL VIDYAPEETH",
+        "state": "Maharashtra",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (HONS.)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "dypm",
+      "name": "D Y Patil University, Navi Mumbai",
+      "slug": "d-y-patil-university-navi-mumbai",
+      "type": "deemed",
+      "ownership": "private",
+      "category": "university",
+      "city": "navi-mumbai",
+      "website": "https://dypatil.edu/",
+      "logoUrl": "https://dypatil-edu-cms.s3.ap-south-1.amazonaws.com/static-images/icons/logo.svg",
+      "aliases": [
+        "D Y Patil (Deemed to be University)"
+      ],
+      "ugcDeb": {
+        "listedAs": "D.Y. Patil",
+        "state": "Maharashtra",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "upes",
+      "name": "UPES (University of Petroleum and Energy Studies)",
+      "slug": "upes-dehradun",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "dehradun",
+      "website": "https://www.upes.ac.in/",
+      "logoUrl": "https://www.upes.ac.in/assets/images/UPES-logo.svg",
+      "aliases": [
+        "UPES"
+      ],
+      "ugcDeb": {
+        "listedAs": "University of Petroleum and Energy Studies",
+        "state": "Uttarakhand",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (GENERAL)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (INFRASTRUCTURE MANAGEMENT)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (LOGISTICS AND SUPPLY CHAIN MANAGEMENT)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (OIL AND GAS MANAGEMENT)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION (POWER MANAGEMENT)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (HONS.) - 4 Years",
+          "level": ""
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "cu",
+      "name": "Chandigarh University",
+      "slug": "chandigarh-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "mohali",
+      "website": "https://www.cuchd.in/",
+      "logoUrl": "https://www.cuchd.in/home-assets/img/logo.png",
+      "aliases": [
+        "CU"
+      ],
+      "ugcDeb": {
+        "listedAs": "Chandigarh University",
+        "state": "Punjab",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ECONOMICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM AND MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (DATA SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (JOURNALISM AND MASS COMMUNICATION)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "lpu",
+      "name": "Lovely Professional University",
+      "slug": "lovely-professional-university",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "phagwara",
+      "website": "https://www.lpu.in/",
+      "logoUrl": "https://www.lpu.in/images/logo/lpu-logo.svg",
+      "aliases": [
+        "LPU"
+      ],
+      "ugcDeb": {
+        "listedAs": "Lovely Professional University",
+        "state": "Punjab",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (HISTORY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (POLITICAL SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (SOCIOLOGY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (DATA SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (ECONOMICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (COMBINATION OF 3 SUBJECTS: ECONOMICS, COMPUTER APPLICATIONS, MANAGEMENT, HISTORY, POLITICAL SCIENCE, SOCIOLOGY, ENGLISH, HINDI)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "muj",
+      "name": "Manipal University Jaipur",
+      "slug": "manipal-university-jaipur",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "jaipur",
+      "website": "https://jaipur.manipal.edu/",
+      "logoUrl": "https://jaipur.manipal.edu/img/manipal-university-jaipur-logo-01.svg",
+      "aliases": [
+        "MUJ"
+      ],
+      "ugcDeb": {
+        "listedAs": "Manipal University",
+        "state": "Rajasthan",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ECONOMICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE (GENERAL)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "amity",
+      "name": "Amity University, Noida",
+      "slug": "amity-university-noida",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "noida",
+      "website": "https://www.amity.edu/",
+      "logoUrl": "https://www.amity.edu/images/logo-amity.png",
+      "aliases": [
+        "Amity University Uttar Pradesh"
+      ],
+      "ugcDeb": {
+        "listedAs": "Amity University",
+        "state": "Uttar Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (ECONOMICS)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS PUBLIC POLICY & GOVERNANCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE (FINANCIAL MANAGEMENT/ FINANCIAL TECHNOLOGY)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SOCIAL WORK",
+          "level": "PG"
+        },
+        {
+          "name": "POST GRADUATE DIPLOMA (LOGISTICS)",
+          "level": "PG"
+        },
+        {
+          "name": "POST GRADUATE DIPLOMA (MACHINE LEARNING AND ARTIFICIAL INTELLIGENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "POST GRADUATE DIPLOMA (MANAGEMENT)",
+          "level": "PG"
+        },
+        {
+          "name": "POST GRADUATE DIPLOMA-DATA SCIENCE",
+          "level": "PG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (JOURNALISM AND MASS COMMUNICATION)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF ARTS (POLITICAL SCIENCE,ECONOMICS,ENGLISH,SOCIOLOGY)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMMERCE (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS (GENERAL)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF SOCIAL WORK",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    },
+    {
+      "key": "mangal",
+      "name": "Mangalayatan University",
+      "slug": "mangalayatan-university-aligarh",
+      "type": "private",
+      "ownership": "private",
+      "category": "university",
+      "city": "aligarh",
+      "website": "https://www.mangalayatan.in/",
+      "logoUrl": "https://www.mangalayatan.in/resource/images/logo.png",
+      "aliases": [],
+      "ugcDeb": {
+        "listedAs": "Mangalayatan University",
+        "state": "Uttar Pradesh",
+        "session": "2026-27 July",
+        "current": true
+      },
+      "programmes": [
+        {
+          "name": "MASTER OF ARTS (EDUCATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (ENGLISH)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (JOURNALISM & MASS COMMUNICATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (POLITICAL SCIENCE)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF ARTS (PUBLIC ADMINISTRATION)",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF BUSINESS ADMINISTRATION",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMMERCE",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF COMPUTER APPLICATIONS",
+          "level": "PG"
+        },
+        {
+          "name": "MASTER OF SCIENCE (MATHEMATICS)",
+          "level": "PG"
+        },
+        {
+          "name": "B.A (ENGLISH, HISTORY, POLITICAL SCIENCE, ECONOMICS AND SOCIOLOGY)",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF BUSINESS ADMINISTRATION",
+          "level": "UG"
+        },
+        {
+          "name": "BACHELOR OF COMPUTER APPLICATIONS",
+          "level": "UG"
+        }
+      ],
+      "lastListedProgrammes": []
+    }
+  ]
+}

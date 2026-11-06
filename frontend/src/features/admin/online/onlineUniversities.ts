@@ -103,6 +103,8 @@ async function fromCatalogue(u: OnlineUniversity, card: CollegeCard, signal: Abo
     const level = levelOf(o.course?.level);
     if (o.mode === "online" && level && o.course) courses.push({ id: o.id, name: o.course.name, specialization: o.specialization ?? "", level, durationMonths: o.durationMonths });
   }
+  // UG first, then PG; by course name within each.
+  courses.sort((a, b) => a.level.localeCompare(b.level) || a.name.localeCompare(b.name) || a.specialization.localeCompare(b.specialization));
   return { key: u.key, label: u.label, status: "catalogue", name: d.name, slug: d.slug, city: d.city ?? "", state: d.state ?? "", logoUrl: d.logoUrl ?? null, about: d.about ?? "", website: d.website ?? null, courses };
 }
 

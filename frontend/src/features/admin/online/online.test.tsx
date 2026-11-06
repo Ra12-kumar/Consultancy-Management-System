@@ -53,7 +53,12 @@ describe("Online UG & PG", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
 
+    expect(within(amity).getByRole("img", { name: "Amity University, Noida logo" })).toHaveAttribute("src", "https://example.org/logo.png");
+
     const jamia = screen.getByRole("article", { name: "Jamia Hamdard" });
+    // No logo in the source: a neutral placeholder, never another picture.
+    expect(within(jamia).queryByRole("img")).toBeNull();
+    expect(within(jamia).getByText("Logo not available")).toBeInTheDocument();
     expect(within(jamia).getByRole("link", { name: /View College/ })).toHaveAttribute("href", "http://example.net/");
     expect(within(jamia).getByText(/Description not yet added/)).toBeInTheDocument();
     expect(within(jamia).getByText(/Source: College finder/)).toBeInTheDocument();

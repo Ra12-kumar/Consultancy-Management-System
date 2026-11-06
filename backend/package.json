@@ -26,7 +26,8 @@
     "migrate:stage7": "tsx ../database/scripts/migrate-stage7.ts",
     "migrate:directory": "tsx ../database/scripts/migrate-directory.ts",
     "migrate:indexes": "tsx ../database/scripts/migrate-indexes.ts",
-    "websites:check": "tsx ../database/scripts/check-college-websites.ts"
+    "websites:check": "tsx ../database/scripts/check-college-websites.ts",
+    "online:import": "node --use-system-ca --import tsx ../database/scripts/import-online-universities.ts"
   },
   "dependencies": {
     "argon2": "^0.45.1",

@@ -30,6 +30,7 @@
     "migrate:directory": "npm --workspace backend run migrate:directory",
     "migrate:indexes": "npm --workspace backend run migrate:indexes",
     "websites:check": "npm --workspace backend run websites:check --",
+    "online:import": "npm --workspace backend run online:import --",
     "db:check": "npm --workspace backend run db:check",
     "admin:bootstrap": "npm --workspace backend run admin:bootstrap --",
     "invite:create": "npm --workspace backend run invite:create --",

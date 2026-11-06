@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Alert, Badge, EmptyState, Skeleton } from "@/components/ui/Feedback";
 import { SelectField, TextField } from "@/components/ui/Field";
-import { CollegeLogo } from "@/features/catalog/CatalogUi";
+import { ownImage } from "@/features/catalog/CatalogUi";
 import { PageTitle } from "@/features/admin/shared";
 import { useApiData } from "@/hooks/useApiData";
 import { durationLabel } from "@/lib/format";
@@ -16,6 +16,28 @@ import { filterOnline, loadOnlineColleges, ONLINE_UNIVERSITIES, type OnlineColle
 
 const LEVEL_LABEL: Record<ProgramLevel, string> = { ug: "UG", pg: "PG" };
 const SOURCE: Partial<Record<OnlineCollege["status"], string>> = { catalogue: "Udaan college catalogue", finder: "College finder (Wikidata)" };
+
+// The university's own logo (an https address from its official website, or one uploaded by an admin) in a panel
+// of fixed size; a neutral placeholder when there is none or it fails to load. Never a stand-in picture.
+function LogoPanel({ college }: { college: OnlineCollege }) {
+  const [failed, setFailed] = useState(false);
+  const src = ownImage(college.logoUrl) ?? safeHref(college.logoUrl, { httpsOnly: true });
+  return (
+    <div className="flex h-28 items-center justify-center rounded-xl border border-line bg-white px-6 py-4">
+      {src && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element -- official logos from each university's own website
+        <img src={src} alt={`${college.name ?? college.label} logo`} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="max-h-full max-w-full object-contain" />
+      ) : (
+        <span className="flex flex-col items-center gap-1 text-slate-400">
+          <svg viewBox="0 0 24 24" className="size-9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 10 12 4l9 6M5 10v8M19 10v8M9 10v8M15 10v8M3 20h18" />
+          </svg>
+          <span className="text-[11px] font-medium">Logo not available</span>
+        </span>
+      )}
+    </div>
+  );
+}
 
 function ViewCollege({ college }: { college: OnlineCollege }) {
   const href = safeHref(college.website);
@@ -51,8 +73,8 @@ function CollegeTile({ college, level, onRetry }: { college: OnlineCollege; leve
   const found = college.status === "catalogue" || college.status === "finder";
   return (
     <article className="flex flex-col rounded-2xl border border-line bg-surface p-5 shadow-sm" aria-label={college.label}>
-      <div className="flex items-start gap-3">
-        <CollegeLogo name={college.name ?? college.label} logoUrl={college.logoUrl} />
+      <LogoPanel college={college} />
+      <div className="mt-4 flex items-start gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold tracking-wide text-muted uppercase">{college.label}</p>
           <h2 className="font-semibold leading-snug">{college.name ?? college.label}</h2>
