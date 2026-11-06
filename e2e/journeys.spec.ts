@@ -31,7 +31,7 @@ test("a visitor searches colleges, sees labelled sample data and a separate serv
   await expect(page.getByText(/Consultancy service charge \(separate from college fees\)/).first()).toBeVisible();
 });
 
-test("a student registers, verifies with the emailed code, completes the enquiry form and gets a reference number", async ({ page }) => {
+test("a student registers, verifies with the emailed code, submits an enquiry and gets a reference number", async ({ page }) => {
   await page.goto("/register");
   await page.getByLabel(/Full name/).fill(student.name);
   await page.getByLabel(/^Email/).fill(student.email);
@@ -53,20 +53,15 @@ test("a student registers, verifies with the emailed code, completes the enquiry
   await page.getByRole("button", { name: "Verify and continue" }).click();
   // A correct code verifies the email and signs the student in.
   await page.waitForURL(/\/student$/);
-  await page.goto("/enquire");
-  await expect(page.getByRole("heading", { name: "Your details" })).toBeVisible();
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "B.Tech / B.E." }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByRole("button", { name: "Continue" }).click();
-  // The last Continue must show the review step, not submit straight away.
-  await expect(page.getByRole("heading", { name: "Review and submit" })).toBeVisible();
-  await expect(page.getByText("Your reference:")).toHaveCount(0);
-  await page.getByRole("button", { name: "Submit enquiry" }).click();
-  const ref = page.getByText(/ENQ-\d{4}-\d{6}/).first();
-  await expect(ref).toBeVisible();
-  reference = (await ref.textContent())!.match(/ENQ-\d{4}-\d{6}/)![0];
-  await page.getByRole("link", { name: "Track this enquiry" }).click();
+  // The /enquire page was removed; the enquiry is submitted through the same API the form used (signed-in student).
+  const origin = new URL(page.url()).origin;
+  const courses = (await (await page.request.get("/api/courses")).json()).data as Array<{ id: string; name: string }>;
+  const btech = courses.find((c) => c.name === "B.Tech / B.E.")!;
+  const created = await page.request.post("/api/enquiries", { data: { idempotencyKey: `e2e-${Date.now()}`, courses: [btech.id], colleges: [], locations: [], hostel: false, admissionYear: new Date().getFullYear(), counsellingRequest: "" }, headers: { Origin: origin } });
+  expect(created.status(), await created.text()).toBe(201);
+  reference = (await created.json()).data.reference as string;
+  expect(reference).toMatch(/^ENQ-\d{4}-\d{6}$/);
+  await page.goto(`/student/enquiries/${reference}`);
   await expect(page.getByRole("heading", { name: `Enquiry ${reference}` })).toBeVisible();
 });
 
