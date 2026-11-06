@@ -16,6 +16,7 @@ const detail = {
   logoUrl: "https://example.org/logo.png",
   about: "Test description from the catalogue.",
   website: "https://example.org/",
+  lastVerifiedAt: "2026-11-06T10:00:00.000Z",
   offerings: [
     { id: "o1", mode: "online", course: { name: "BBA", level: "ug" }, specialization: "", durationMonths: 36 },
     { id: "o2", mode: "online", course: { name: "MBA", level: "pg" }, specialization: "Finance", durationMonths: 24 },
@@ -43,8 +44,9 @@ describe("Online UG & PG", () => {
     const amity = await screen.findByRole("article", { name: "Amity" });
     expect(within(amity).getByText("Amity University, Noida")).toBeInTheDocument();
     expect(within(amity).getByText("Test description from the catalogue.")).toBeInTheDocument();
-    expect(within(amity).getByText("BBA")).toBeInTheDocument();
-    expect(within(amity).getByText("MBA")).toBeInTheDocument();
+    const list = within(within(amity).getByRole("list", { name: /Online courses at/ }));
+    expect(list.getByText("BBA")).toBeInTheDocument();
+    expect(list.getByText("MBA")).toBeInTheDocument();
     // Offline and non-UG/PG courses are not listed.
     expect(within(amity).queryByText("B.Tech")).toBeNull();
     expect(within(amity).queryByText("PhD")).toBeNull();
@@ -53,6 +55,9 @@ describe("Online UG & PG", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link.getAttribute("rel")).toContain("noopener");
 
+    expect(within(amity).getByText("Verified")).toBeInTheDocument();
+    expect(within(amity).getByText("UG:").parentElement).toHaveTextContent("UG: BBA");
+    expect(within(amity).getByText("PG:").parentElement).toHaveTextContent("PG: MBA");
     expect(within(amity).getByRole("img", { name: "Amity University, Noida logo" })).toHaveAttribute("src", "https://example.org/logo.png");
 
     const jamia = screen.getByRole("article", { name: "Jamia Hamdard" });
@@ -62,6 +67,8 @@ describe("Online UG & PG", () => {
     expect(within(jamia).getByRole("link", { name: /View College/ })).toHaveAttribute("href", "http://example.net/");
     expect(within(jamia).getByText(/Description not yet added/)).toBeInTheDocument();
     expect(within(jamia).getByText(/Source: College finder/)).toBeInTheDocument();
+    // Finder entries are not catalogue-verified.
+    expect(within(jamia).queryByText("Verified")).toBeNull();
 
     // A look-alike institution is not shown as the university.
     const parul = screen.getByRole("article", { name: "Parul" });
@@ -85,8 +92,19 @@ describe("Online UG & PG", () => {
     await userEvent.selectOptions(screen.getByLabelText("Course level"), "pg");
     const only = screen.getAllByRole("article");
     expect(only).toHaveLength(1);
-    expect(within(only[0]).getByText("MBA")).toBeInTheDocument();
-    expect(within(only[0]).queryByText("BBA")).toBeNull();
+    const pgList = within(within(only[0]!).getByRole("list", { name: /Online courses at/ }));
+    expect(pgList.getByText("MBA")).toBeInTheDocument();
+    expect(pgList.queryByText("BBA")).toBeNull();
+    expect(within(only[0]!).queryByText("UG:")).toBeNull();
+
+    await userEvent.selectOptions(screen.getByLabelText("Course level"), "");
+    await userEvent.selectOptions(screen.getByLabelText("Course"), "BBA");
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    await userEvent.selectOptions(screen.getByLabelText("Course"), "");
+    await userEvent.selectOptions(screen.getByLabelText("Location"), "Uttar Pradesh");
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    expect(screen.getByText("Universities Found").parentElement).toHaveTextContent("1 Universities Found");
+    await userEvent.selectOptions(screen.getByLabelText("Location"), "");
 
     await userEvent.type(screen.getByLabelText("Search"), "nothing like this");
     expect(screen.getByText("No universities match")).toBeInTheDocument();
@@ -118,7 +136,7 @@ describe("matching rules", () => {
   });
 
   it("searches course names too", () => {
-    const item = { key: "k", label: "X", status: "catalogue" as const, name: "X University", slug: "x", city: "", state: "", logoUrl: null, about: "", website: null, courses: [{ id: "1", name: "MCA", specialization: "", level: "pg" as const, durationMonths: 24 }] };
+    const item = { key: "k", label: "X", status: "catalogue" as const, name: "X University", slug: "x", city: "", state: "", logoUrl: null, about: "", website: null, verifiedAt: null, photoUrl: null, courses: [{ id: "1", name: "MCA", specialization: "", level: "pg" as const, durationMonths: 24 }] };
     expect(filterOnline([item], "mca", "")).toHaveLength(1);
     expect(filterOnline([item], "", "ug")).toHaveLength(0);
   });

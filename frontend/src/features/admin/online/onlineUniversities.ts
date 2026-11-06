@@ -51,12 +51,15 @@ export type OnlineCollege = {
   about: string;
   website: string | null;
   courses: OnlineCourse[];
+  // When the catalogue record was last verified, and a campus photo an admin added (null when none).
+  verifiedAt: string | null;
+  photoUrl: string | null;
 };
 
 // UG = undergraduate degrees; PG = postgraduate degrees and PG diplomas. Other levels are outside this section.
 export const levelOf = (level: string | undefined): ProgramLevel | null => (level === "ug" ? "ug" : level === "pg" || level === "pg_diploma" ? "pg" : null);
 
-const blank = (u: OnlineUniversity, status: OnlineCollegeStatus): OnlineCollege => ({ key: u.key, label: u.label, status, name: null, slug: null, city: "", state: "", logoUrl: null, about: "", website: null, courses: [] });
+const blank = (u: OnlineUniversity, status: OnlineCollegeStatus): OnlineCollege => ({ key: u.key, label: u.label, status, name: null, slug: null, city: "", state: "", logoUrl: null, about: "", website: null, courses: [], verifiedAt: null, photoUrl: null });
 
 // The record that best stands for the university: one with a website first, then the shortest (main) name.
 export function bestMatch<T extends { name: string; website?: string | null }>(u: OnlineUniversity, items: T[]): T | null {
@@ -105,7 +108,7 @@ async function fromCatalogue(u: OnlineUniversity, card: CollegeCard, signal: Abo
   }
   // UG first, then PG; by course name within each.
   courses.sort((a, b) => a.level.localeCompare(b.level) || a.name.localeCompare(b.name) || a.specialization.localeCompare(b.specialization));
-  return { key: u.key, label: u.label, status: "catalogue", name: d.name, slug: d.slug, city: d.city ?? "", state: d.state ?? "", logoUrl: d.logoUrl ?? null, about: d.about ?? "", website: d.website ?? null, courses };
+  return { key: u.key, label: u.label, status: "catalogue", name: d.name, slug: d.slug, city: d.city ?? "", state: d.state ?? "", logoUrl: d.logoUrl ?? null, about: d.about ?? "", website: d.website ?? null, courses, verifiedAt: d.lastVerifiedAt ?? null, photoUrl: d.imageUrl ?? d.coverUrl ?? null };
 }
 
 async function fromFinder(u: OnlineUniversity, signal: AbortSignal): Promise<OnlineCollege> {
@@ -136,11 +139,14 @@ export async function loadOnlineColleges(signal: AbortSignal): Promise<OnlineCol
   });
 }
 
-// Search (university, record name, place or course) and the UG/PG filter, applied in the browser.
-export function filterOnline(items: OnlineCollege[], q: string, level: "" | ProgramLevel): OnlineCollege[] {
+// Search (university, record name, place or course), the UG/PG filter, and optional course and state filters,
+// applied in the browser.
+export function filterOnline(items: OnlineCollege[], q: string, level: "" | ProgramLevel, course = "", state = ""): OnlineCollege[] {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter((c) => {
     if (level && !c.courses.some((x) => x.level === level)) return false;
+    if (course && !c.courses.some((x) => x.name === course && (!level || x.level === level))) return false;
+    if (state && c.state !== state) return false;
     if (!words.length) return true;
     const hay = [c.label, c.name, c.city, c.state, ...c.courses.flatMap((x) => [x.name, x.specialization])].join(" ").toLowerCase();
     return words.every((w) => hay.includes(w));
