@@ -1,4 +1,6 @@
+import dnsp, { lookup } from 'node:dns/promises';
 import fs from 'node:fs/promises';
+import net from 'node:net';
 import path from 'node:path';
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
@@ -72,9 +74,99 @@ export function verifiedWebsite(name: string, url: string | null): string | null
   return r.ok ? r.finalUrl : null;
 }
 
+// ---- Only public web addresses are ever opened (the links come from Wikidata, which anyone can edit) ----
+
+// True for addresses that are not on the public internet: loopback, private networks, link-local (including the
+// cloud metadata address 169.254.169.254), carrier-grade NAT, benchmarking, multicast and reserved ranges.
+export function isPrivateAddress(ip: string): boolean {
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
+  if (mapped) return isPrivateAddress(mapped[1]!);
+  if (net.isIPv4(ip)) {
+    const [a, b] = ip.split('.').map(Number) as [number, number];
+    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || (a === 192 && b === 0);
+  }
+  const v6 = ip.toLowerCase();
+  return v6 === '::' || v6 === '::1' || /^f[cd]/.test(v6) || /^fe[89ab]/.test(v6) || /^ff/.test(v6);
+}
+
+const LOCAL_NAMES = /(^localhost$|\.localhost$|\.local$|\.internal$|\.lan$|\.home\.arpa$|\.intranet$)/i;
+type Resolver = (host: string) => Promise<string[]>;
+// DNS for the safety check: Node's own resolver (reliable under many parallel lookups, unlike the operating
+// system's), first with this computer's DNS servers, then with public ones; the system lookup is the last resort.
+// Only a definite "no such domain" from all of them counts as not found; anything else is a temporary failure.
+const systemDns = new dnsp.Resolver({ timeout: 5000, tries: 2 });
+const publicDns = new dnsp.Resolver({ timeout: 5000, tries: 2 });
+publicDns.setServers(['1.1.1.1', '8.8.8.8']);
+const NO_SUCH_DOMAIN = new Set(['ENOTFOUND', 'ENODATA', 'NXDOMAIN', 'ENONAME']);
+async function addressesFrom(resolver: InstanceType<typeof dnsp.Resolver>, host: string) {
+  const [v4, v6] = await Promise.allSettled([resolver.resolve4(host), resolver.resolve6(host)]);
+  const ips = [...(v4.status === 'fulfilled' ? v4.value : []), ...(v6.status === 'fulfilled' ? v6.value : [])];
+  if (ips.length) return ips;
+  const codes = [v4, v6].map((r) => (r.status === 'rejected' ? (r.reason as { code?: string }).code : 'ENODATA'));
+  throw Object.assign(new Error('no address'), { code: codes.every((c) => NO_SUCH_DOMAIN.has(c ?? '')) ? 'ENOTFOUND' : 'EAI_AGAIN' });
+}
+const dnsResolver: Resolver = async (host) => {
+  let lastCode = 'EAI_AGAIN';
+  for (const resolver of [systemDns, publicDns]) {
+    try {
+      return await addressesFrom(resolver, host);
+    } catch (err) {
+      lastCode = (err as { code: string }).code;
+    }
+  }
+  try {
+    return (await lookup(host, { all: true })).map((a) => a.address);
+  } catch {
+    throw Object.assign(new Error('no address'), { code: lastCode });
+  }
+};
+let resolveHost: Resolver = dnsResolver;
+
+// Tests resolve every made-up host to a public documentation address.
+export function setHostResolver(fn: Resolver | null) {
+  resolveHost = fn ?? dnsResolver;
+}
+
+// Why an address must not be opened, or null when it is a public http(s) site on the standard ports.
+async function blockedReason(url: string): Promise<string | null> {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return 'invalid address';
+  }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return 'not a web address';
+  if (u.port && u.port !== '80' && u.port !== '443') return 'non-standard port';
+  if (u.username || u.password) return 'address with credentials';
+  const host = u.hostname.replace(/^\[|\]$/g, '');
+  if (LOCAL_NAMES.test(host)) return 'local address';
+  if (net.isIP(host)) return isPrivateAddress(host) ? 'private address' : null;
+  try {
+    const ips = await resolveHost(host);
+    return ips.some(isPrivateAddress) ? 'private address' : null;
+  } catch (err) {
+    // A definite "no such domain", or a temporary DNS failure (tried again at the end of the run).
+    return (err as { code?: string }).code === 'ENOTFOUND' ? 'ENOTFOUND' : 'EAI_AGAIN';
+  }
+}
+
 async function open(url: string): Promise<{ res: Response | null; error: string | null; body: string }> {
   try {
-    const res = await fetchFn(url, { method: 'GET', redirect: 'follow', headers: HEADERS, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    // Redirects are followed one hop at a time so every hop is checked as well (at most 6 hops).
+    let current = url;
+    let res: Response | null = null;
+    for (let hop = 0; hop <= 6; hop += 1) {
+      const blocked = await blockedReason(current);
+      if (blocked) return { res: null, error: blocked, body: '' };
+      res = await fetchFn(current, { method: 'GET', redirect: 'manual', headers: HEADERS, signal: AbortSignal.timeout(TIMEOUT_MS) });
+      const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+      if (!location) break;
+      await res.body?.cancel().catch(() => undefined);
+      current = new URL(location, current).toString();
+      if (hop === 6) return { res: null, error: 'too many redirects', body: '' };
+    }
+    if (!res) return { res: null, error: 'unreachable', body: '' };
+    if (!res.url) Object.defineProperty(res, 'url', { value: current });
     // Only the start of the page is read (enough to spot parking or suspension pages).
     let body = '';
     if (res.body && (res.headers.get('content-type') ?? '').includes('html')) {
@@ -111,8 +203,8 @@ function judge(url: string, r: { res: Response | null; error: string | null; bod
   return { ok: false, finalUrl: null, status: r.res.status, reason: `HTTP ${r.res.status}`, checkedAt };
 }
 
-// Opens one link: the https form first for http links, then the link as given; a time-out is retried once.
-export async function checkWebsite(url: string): Promise<WebsiteCheck> {
+// Tries each address in turn (https first for http links); a time-out is retried once.
+async function tryForms(url: string): Promise<WebsiteCheck> {
   const attempts = url.startsWith('http://') ? [`https://${url.slice('http://'.length)}`, url] : [url];
   let last: WebsiteCheck | null = null;
   for (const candidate of attempts) {
@@ -123,6 +215,23 @@ export async function checkWebsite(url: string): Promise<WebsiteCheck> {
   }
   return last!;
 }
+
+// Opens one link. A "www." address that no longer exists is also tried without "www." (the same domain, which
+// often still works).
+export async function checkWebsite(url: string): Promise<WebsiteCheck> {
+  const first = await tryForms(url);
+  if (first.ok || first.reason !== 'ENOTFOUND') return first;
+  const u = new URL(url);
+  if (!u.hostname.startsWith('www.')) return first;
+  u.hostname = u.hostname.slice(4);
+  const bare = await tryForms(u.toString());
+  return bare.ok ? bare : first;
+}
+
+// Failures worth a second try at the end of a run (temporary DNS trouble, time-outs, dropped connections), and
+// "www." links checked before the without-"www." fallback existed.
+const TRANSIENT = /EAI_AGAIN|TIMEOUT|Timeout|abort|UND_ERR_SOCKET|ECONNRESET|EPIPE/;
+const needsSecondTry = (url: string, r: WebsiteCheck) => !r.ok && (TRANSIENT.test(r.reason) || (r.reason === 'ENOTFOUND' && /^https?:\/\/www\./.test(url)));
 
 // Checks every link (except excluded colleges), a few at a time, saving progress as it goes.
 export async function checkWebsites(colleges: Array<{ name: string; website: string | null }>, { concurrency = 16, onProgress }: { concurrency?: number; onProgress?: (done: number, total: number) => void } = {}) {
@@ -147,6 +256,17 @@ export async function checkWebsites(colleges: Array<{ name: string; website: str
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, worker));
+  // Second pass for temporary failures, fewer at a time: a link is broken only if it fails both times.
+  const again = Object.keys(results).filter((u) => needsSecondTry(u, results[u]!));
+  let k = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(Math.max(1, Math.floor(concurrency / 2)), again.length) }, async () => {
+      while (k < again.length) {
+        const url = again[k++]!;
+        results[url] = await checkWebsite(url);
+      }
+    }),
+  );
   store = { checkedAt: new Date().toISOString(), complete: true, results };
   await saveStore();
   onProgress?.(all.length, all.length);
