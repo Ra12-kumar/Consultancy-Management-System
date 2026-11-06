@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
-import LoginForm from "@/features/auth/LoginForm";
-import AuthCard from "@/features/auth/AuthCard";
 import { Spinner } from "@/components/ui/Feedback";
+import UdanLogin from "@/features/auth/UdanLogin";
 
 export const metadata: Metadata = { title: "Sign in" };
 
+// Sign-in page in the Udaan client design (previous: features/auth/AuthCard + LoginForm, kept in the code).
+// The form reads ?next= (useSearchParams), so it renders inside Suspense.
 export default function Page() {
   return (
-    <AuthCard
-      title="Sign in"
-      subtitle="Students and administrators sign in here."
-      footer={<>New here? <Link href="/register" className="font-semibold text-accent-text hover:underline">Create a student account</Link></>}
-    >
-      <Suspense fallback={<Spinner />}>
-        <LoginForm />
-      </Suspense>
-    </AuthCard>
+    <Suspense fallback={<main id="main" className="flex flex-1 items-center justify-center py-20"><Spinner /></main>}>
+      <UdanLogin />
+    </Suspense>
   );
 }
